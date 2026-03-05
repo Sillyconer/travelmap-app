@@ -1,0 +1,109 @@
+/*
+ * TravelMap — M3 Outlined Text Field Styles
+ */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.fullWidth {
+    width: 100%;
+}
+
+.inputWrapper {
+    position: relative;
+    height: 56px;
+    background-color: transparent;
+    border-radius: var(--md-sys-shape-corner-extra-small);
+    box-sizing: border-box;
+}
+
+/* Base input */
+.input {
+    width: 100%;
+    height: 100%;
+    padding: 0 var(--md-sys-spacing-16);
+    background: transparent;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: var(--md-sys-shape-corner-extra-small);
+    color: var(--md-sys-color-on-surface);
+    font-family: var(--md-sys-typescale-body-large-font);
+    font-size: var(--md-sys-typescale-body-large-size);
+    font-weight: var(--md-sys-typescale-body-large-weight);
+    letter-spacing: var(--md-sys-typescale-body-large-tracking);
+    outline: none;
+    transition: border-color 0.2s, border-width 0.2s;
+}
+
+.input:hover {
+    border-color: var(--md-sys-color-on-surface);
+}
+
+.input:focus {
+    border-color: var(--md-sys-color-primary);
+    border-width: 2px;
+    padding: 0 15px;
+    /* Adjust padding to prevent jumping when border becomes 2px */
+}
+
+/* Floating Label */
+.label {
+    position: absolute;
+    left: var(--md-sys-spacing-16);
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--md-sys-color-surface);
+    /* Masks the border line behind it */
+    padding: 0 4px;
+    /* Small padding so line doesn't cut right to the letter */
+    margin-left: -4px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: var(--md-sys-typescale-body-large-font);
+    font-size: var(--md-sys-typescale-body-large-size);
+    pointer-events: none;
+    transition: transform 0.2s, font-size 0.2s, color 0.2s;
+    transform-origin: left top;
+}
+
+/* Float the label when input is focused, or when input has value (not placeholder-shown) */
+.input:focus~.label,
+.input:not(:placeholder-shown)~.label {
+    transform: translateY(-28px) scale(0.75);
+    /* Moves it up to the border line */
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.input:focus~.label {
+    color: var(--md-sys-color-primary);
+}
+
+/* Support Text (Error or Helper) */
+.supportText {
+    padding: 4px var(--md-sys-spacing-16) 0;
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: var(--md-sys-typescale-body-small-font);
+    font-size: var(--md-sys-typescale-body-small-size);
+    letter-spacing: var(--md-sys-typescale-body-small-tracking);
+    min-height: 20px;
+}
+
+/* ── Error State ── */
+
+.errorState .input {
+    border-color: var(--md-sys-color-error);
+}
+
+.errorState .input:focus {
+    border-color: var(--md-sys-color-error);
+}
+
+.errorState .input:focus~.label,
+.errorState .input:not(:placeholder-shown)~.label {
+    color: var(--md-sys-color-error);
+}
+
+.errorState .supportText {
+    color: var(--md-sys-color-error);
+}

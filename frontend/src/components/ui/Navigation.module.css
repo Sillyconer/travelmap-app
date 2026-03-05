@@ -1,0 +1,223 @@
+/*
+ * TravelMap — M3 Navigation Rail Styles
+ */
+
+.nav {
+    display: flex;
+    flex-direction: column;
+    width: 80px;
+    /* Base collapsed width for Rail */
+    height: 100vh;
+    background-color: var(--md-sys-color-surface);
+    border-right: 1px solid var(--md-sys-color-outline-variant);
+    padding: var(--md-sys-spacing-16) 0 var(--md-sys-spacing-24) 0;
+    z-index: 1000;
+    transition: width 0.2s ease;
+    overflow-x: hidden;
+}
+
+/* On desktop, expand to a slightly wider sidebar on hover (optional, but nice for labels) */
+@media (min-width: 768px) {
+    .nav:hover {
+        width: 240px;
+    }
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--md-sys-spacing-24);
+    margin-bottom: var(--md-sys-spacing-32);
+    height: 48px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.logoIcon {
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 32px;
+    /* Centers icon correctly when collapsed */
+    margin-right: var(--md-sys-spacing-24);
+}
+
+.logoText {
+    font-family: var(--md-sys-typescale-title-large-font);
+    font-size: var(--md-sys-typescale-title-large-size);
+    font-weight: var(--md-sys-typescale-title-large-weight);
+    letter-spacing: var(--md-sys-typescale-title-large-tracking);
+    color: var(--md-sys-color-on-surface);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.nav:hover .logoText {
+    opacity: 1;
+}
+
+.destinations {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-8);
+    padding: 0 var(--md-sys-spacing-12);
+    /* Rail items have 12px horizontal padding */
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    height: 56px;
+    border-radius: var(--md-sys-shape-corner-full);
+    color: var(--md-sys-color-on-surface-variant);
+    text-decoration: none;
+    padding: 0 var(--md-sys-spacing-12);
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* State layer for hover */
+.item::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: var(--md-sys-color-on-surface);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.item:hover::after {
+    opacity: var(--md-sys-state-hover);
+}
+
+.item:active::after {
+    opacity: var(--md-sys-state-pressed);
+}
+
+/* Active State */
+.active {
+    color: var(--md-sys-color-on-secondary-container);
+    font-weight: 600;
+}
+
+/* Active background pill */
+.active::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: var(--md-sys-color-secondary-container);
+    z-index: -1;
+}
+
+/* We don't want the regular hover state layer when active, we want a primary colored one */
+.active::after {
+    background-color: var(--md-sys-color-on-secondary-container);
+}
+
+.icon {
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 32px;
+    margin-right: var(--md-sys-spacing-24);
+}
+
+.label {
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+    letter-spacing: var(--md-sys-typescale-label-large-tracking);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+/* Show labels when nav is hovered (desktop) */
+.nav:hover .label {
+    opacity: 1;
+}
+
+.divider {
+    height: 1px;
+    background-color: var(--md-sys-color-outline-variant);
+    margin: var(--md-sys-spacing-8) 0;
+}
+
+.spacer {
+    flex-grow: 1;
+}
+
+/* ── Mobile Layout (<768px) ── */
+@media (max-width: 767px) {
+    .nav {
+        flex-direction: row;
+        width: 100vw;
+        height: 80px;
+        /* Navigation Bar height */
+        border-right: none;
+        border-top: 1px solid var(--md-sys-color-outline-variant);
+        padding: 0;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        background-color: var(--md-sys-color-surface-container);
+        /* Ensure it doesn't expand on hover */
+    }
+
+    .nav:hover {
+        width: 100vw;
+    }
+
+    .logo,
+    .divider,
+    .spacer,
+    .nav:hover .logoText {
+        display: none;
+    }
+
+    .destinations {
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    .item {
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+        width: 64px;
+        padding: 0;
+        border-radius: var(--md-sys-shape-corner-extra-small);
+    }
+
+    .active::before {
+        inset: 12px 0 32px 0;
+        /* pill shape just around the icon */
+        border-radius: 16px;
+    }
+
+    .icon {
+        margin: 0 0 4px 0;
+        z-index: 1;
+    }
+
+    /* Labels are always visible on mobile, but smaller */
+    .label,
+    .nav:hover .label {
+        opacity: 1;
+        font-size: 12px;
+        margin-top: 4px;
+        text-align: center;
+    }
+
+    /* Settings icon explicitly shown in bottom bar */
+    .item:last-child {
+        display: flex;
+        /* Ensure it is part of the layout */
+    }
+}

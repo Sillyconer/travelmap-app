@@ -1,0 +1,100 @@
+/*
+ * TravelMap — M3 Button Styles
+ */
+
+.base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--md-sys-spacing-8);
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: var(--md-sys-typescale-label-large-weight);
+    letter-spacing: var(--md-sys-typescale-label-large-tracking);
+    border-radius: var(--md-sys-shape-corner-full);
+    transition: background-color 0.2s, box-shadow 0.2s, color 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Base sizing */
+.sm {
+    height: 32px;
+    padding: 0 var(--md-sys-spacing-16);
+}
+
+.md {
+    height: 40px;
+    padding: 0 var(--md-sys-spacing-24);
+}
+
+.lg {
+    height: 48px;
+    padding: 0 var(--md-sys-spacing-32);
+}
+
+.fullWidth {
+    width: 100%;
+}
+
+/* State Layer (Overlay div simulator without extra markup via ::after) */
+.base::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: currentColor;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.base:hover::after {
+    opacity: var(--md-sys-state-hover);
+}
+
+.base:focus-visible::after {
+    opacity: var(--md-sys-state-focus);
+}
+
+.base:active::after {
+    opacity: var(--md-sys-state-pressed);
+}
+
+.base:disabled {
+    pointer-events: none;
+    opacity: 0.38;
+}
+
+/* ── Variants ── */
+
+/* 1. Filled */
+.filled {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+/* 2. Tonal */
+.tonal {
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+}
+
+/* 3. Outlined */
+.outlined {
+    background-color: transparent;
+    color: var(--md-sys-color-primary);
+    border: 1px solid var(--md-sys-color-outline);
+}
+
+.outlined:hover {
+    border-color: var(--md-sys-color-primary);
+    /* Focus indicator on hover */
+}
+
+/* 4. Text */
+.text {
+    background-color: transparent;
+    color: var(--md-sys-color-primary);
+    padding: 0 var(--md-sys-spacing-12);
+    /* Text buttons have less padding */
+}

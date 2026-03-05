@@ -1,0 +1,33 @@
+/*
+ * TravelMap — Layout Styles
+ */
+
+.layout {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* Allow the main area to scroll independently of the nav */
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: var(--md-sys-color-surface);
+}
+
+/* ── Mobile Layout (<768px) ── */
+@media (max-width: 767px) {
+    .layout {
+        flex-direction: column;
+    }
+
+    .main {
+        /* Leave space for the fixed bottom navigation bar */
+        height: calc(100vh - 80px);
+    }
+}
