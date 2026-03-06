@@ -11,6 +11,7 @@ backend/*.egg-info/
 
 # Runtime data
 backend/data/
+backend/log.txt
 
 # IDE
 .vscode/
