@@ -145,3 +145,92 @@
     align-items: center;
     gap: 4px;
 }
+
+.commentsPanel {
+    position: absolute;
+    right: 20px;
+    top: 80px;
+    bottom: 110px;
+    width: min(360px, calc(100vw - 40px));
+    background: rgba(10, 12, 16, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 12px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 11;
+}
+
+.commentsPanel h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.commentForm {
+    display: flex;
+    gap: 8px;
+}
+
+.commentForm input {
+    flex: 1;
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    padding: 8px;
+}
+
+.commentForm button,
+.commentActions button {
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.commentList {
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.commentItem {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.commentHead {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+}
+
+.commentHead small {
+    opacity: 0.75;
+}
+
+.commentItem p {
+    margin: 6px 0;
+}
+
+.commentActions {
+    display: flex;
+    gap: 8px;
+}
+
+@media (max-width: 900px) {
+    .commentsPanel {
+        left: 12px;
+        right: 12px;
+        top: auto;
+        bottom: 88px;
+        width: auto;
+        max-height: 42vh;
+    }
+}

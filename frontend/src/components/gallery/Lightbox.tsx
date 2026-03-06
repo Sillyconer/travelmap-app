@@ -1,7 +1,8 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MdClose, MdChevronLeft, MdChevronRight, MdFileDownload, MdLocationOn, MdLocationOff } from 'react-icons/md';
-import type { PhotoOut } from '../../types/models';
+import * as api from '../../api/client';
+import type { CommentItem, PhotoOut } from '../../types/models';
 import styles from './Lightbox.module.css';
 
 interface LightboxProps {
@@ -9,10 +10,14 @@ interface LightboxProps {
     currentIndex: number;
     onClose: () => void;
     onNavigate: (newIndex: number) => void;
+    enableComments?: boolean;
 }
 
-export const Lightbox = ({ photos, currentIndex, onClose, onNavigate }: LightboxProps) => {
+export const Lightbox = ({ photos, currentIndex, onClose, onNavigate, enableComments = false }: LightboxProps) => {
     const photo = photos[currentIndex];
+    const [comments, setComments] = useState<CommentItem[]>([]);
+    const [commentBody, setCommentBody] = useState('');
+    const [isCommentsLoading, setIsCommentsLoading] = useState(false);
 
     // Keyboard navigation
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -31,6 +36,25 @@ export const Lightbox = ({ photos, currentIndex, onClose, onNavigate }: Lightbox
             document.body.style.overflow = '';
         };
     }, [handleKeyDown]);
+
+    useEffect(() => {
+        const loadComments = async () => {
+            if (!enableComments || !photo) {
+                setComments([]);
+                return;
+            }
+            setIsCommentsLoading(true);
+            try {
+                const list = await api.getComments('photo', photo.id);
+                setComments(list);
+            } catch {
+                setComments([]);
+            } finally {
+                setIsCommentsLoading(false);
+            }
+        };
+        loadComments();
+    }, [enableComments, photo?.id]);
 
     if (!photo) return null;
 
@@ -53,6 +77,36 @@ export const Lightbox = ({ photos, currentIndex, onClose, onNavigate }: Lightbox
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+    };
+
+    const handleCreateComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!photo || !commentBody.trim()) return;
+        try {
+            const created = await api.createComment('photo', photo.id, commentBody.trim());
+            setComments(prev => [...prev, created]);
+            setCommentBody('');
+        } catch {
+            // no-op in lightbox
+        }
+    };
+
+    const handleDeleteComment = async (commentId: number) => {
+        try {
+            await api.deleteComment(commentId);
+            setComments(prev => prev.filter(c => c.id !== commentId));
+        } catch {
+            // no-op in lightbox
+        }
+    };
+
+    const handleReact = async (commentId: number, emoji: string) => {
+        try {
+            const reactions = await api.toggleCommentReaction(commentId, emoji);
+            setComments(prev => prev.map(c => (c.id === commentId ? { ...c, reactions } : c)));
+        } catch {
+            // no-op in lightbox
+        }
     };
 
     return (
@@ -130,6 +184,45 @@ export const Lightbox = ({ photos, currentIndex, onClose, onNavigate }: Lightbox
                         )}
                     </div>
                 </div>
+
+                {enableComments && (
+                    <aside className={styles.commentsPanel} onClick={(e) => e.stopPropagation()}>
+                        <h3>Photo discussion</h3>
+                        <form className={styles.commentForm} onSubmit={handleCreateComment}>
+                            <input
+                                value={commentBody}
+                                onChange={e => setCommentBody(e.target.value)}
+                                placeholder="Add a comment"
+                                maxLength={1000}
+                            />
+                            <button type="submit" disabled={!commentBody.trim()}>Post</button>
+                        </form>
+                        <div className={styles.commentList}>
+                            {isCommentsLoading && <p>Loading...</p>}
+                            {!isCommentsLoading && comments.length === 0 && <p>No comments yet.</p>}
+                            {comments.map(comment => (
+                                <div key={comment.id} className={styles.commentItem}>
+                                    <div className={styles.commentHead}>
+                                        <strong>{comment.displayName}</strong>
+                                        <small>@{comment.username}</small>
+                                    </div>
+                                    <p>{comment.body}</p>
+                                    <div className={styles.commentActions}>
+                                        <button type="button" onClick={() => handleReact(comment.id, '👍')}>
+                                            👍 {comment.reactions.find(r => r.emoji === '👍')?.count || 0}
+                                        </button>
+                                        <button type="button" onClick={() => handleReact(comment.id, '❤️')}>
+                                            ❤️ {comment.reactions.find(r => r.emoji === '❤️')?.count || 0}
+                                        </button>
+                                        {comment.canDelete && (
+                                            <button type="button" onClick={() => handleDeleteComment(comment.id)}>Delete</button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </aside>
+                )}
             </motion.div>
         </AnimatePresence>
     );

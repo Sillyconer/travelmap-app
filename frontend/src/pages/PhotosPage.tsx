@@ -81,7 +81,7 @@ export const PhotosPage = () => {
         }
     };
 
-    const handleDownloadSelected = () => {
+    const handleDownloadSelected = async () => {
         if (selectedIds.size === 0) return;
 
         // Group selected photos by tripId to download zip per trip, or download sequentially 
@@ -105,14 +105,21 @@ export const PhotosPage = () => {
             return;
         }
 
-        for (const [tripId, pIds] of tripsToPhotos.entries()) {
-            const url = `http://localhost:8000/api/trips/${tripId}/photos/download?ids=${pIds.join(',')}`;
-            const a = document.createElement('a');
-            a.href = url;
-            a.target = '_blank';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+        try {
+            for (const [tripId, pIds] of tripsToPhotos.entries()) {
+                const blob = await api.downloadTripPhotosZip(tripId, pIds);
+                const objectUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = objectUrl;
+                a.download = `trip_${tripId}_photos.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(objectUrl);
+            }
+        } catch (err: any) {
+            showSnackbar(`Download failed: ${err.message || 'Unknown error'}`);
+            return;
         }
 
         // Clear selection after download
@@ -359,6 +366,7 @@ export const PhotosPage = () => {
                     currentIndex={lightboxIndex}
                     onClose={() => setLightboxIndex(null)}
                     onNavigate={(newIndex) => setLightboxIndex(newIndex)}
+                    enableComments
                 />
             )}
 

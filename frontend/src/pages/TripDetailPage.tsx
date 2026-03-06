@@ -667,6 +667,7 @@ export const TripDetailPage = () => {
                     currentIndex={lightboxIndex}
                     onClose={() => setLightboxIndex(null)}
                     onNavigate={(newIndex) => setLightboxIndex(newIndex)}
+                    enableComments
                 />
             )}
 
