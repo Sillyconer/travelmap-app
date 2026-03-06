@@ -1,0 +1,132 @@
+.sidebar {
+    width: 280px;
+    /* Smaller width */
+    background-color: var(--md-sys-color-glass-surface);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--md-sys-color-glass-border);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 20;
+
+    /* Float over right side of map */
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    bottom: 24px;
+    max-height: calc(100vh - 48px);
+
+    /* Shadow to lift it off map */
+    box-shadow: var(--md-sys-elevation-4);
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: calc(100% - 32px);
+        height: 60vh;
+        max-height: calc(100vh - 120px);
+        top: auto;
+        bottom: 96px;
+        /* Above mobile nav bar */
+        right: 16px;
+        left: 16px;
+    }
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 24px 0 24px;
+}
+
+.section {
+    padding: 24px;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant, #49454f);
+}
+
+.title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+}
+
+.subtitle {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+    color: var(--md-sys-color-primary);
+}
+
+.chipGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chip {
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chip:hover {
+    filter: brightness(1.2);
+}
+
+.tripList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tripItem {
+    display: flex;
+    align-items: center;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--md-sys-color-primary);
+    cursor: pointer;
+}
+
+.colorDot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tripName {
+    font-size: 15px;
+    color: var(--md-sys-color-on-surface);
+}
+
+.emptyText {
+    margin: 0;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-style: italic;
+}

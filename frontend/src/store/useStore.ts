@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Trip, Person } from '../types/models';
+import type { Trip, Person } from '../types/models';
 
 interface AppState {
     // Data

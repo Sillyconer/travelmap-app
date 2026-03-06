@@ -1,36 +1,30 @@
 /*
  * TravelMap — M3 Navigation Rail Styles
+ *
+ * Fixed 64px icon-only rail on desktop. CSS tooltips on hover.
+ * Bottom bar on mobile.
  */
 
 .nav {
     display: flex;
     flex-direction: column;
-    width: 80px;
-    /* Base collapsed width for Rail */
+    width: 64px;
     height: 100vh;
-    background-color: var(--md-sys-color-surface);
+    background-color: var(--md-sys-color-surface-container-low);
     border-right: 1px solid var(--md-sys-color-outline-variant);
     padding: var(--md-sys-spacing-16) 0 var(--md-sys-spacing-24) 0;
     z-index: 1000;
-    transition: width 0.2s ease;
-    overflow-x: hidden;
-}
-
-/* On desktop, expand to a slightly wider sidebar on hover (optional, but nice for labels) */
-@media (min-width: 768px) {
-    .nav:hover {
-        width: 240px;
-    }
+    flex-shrink: 0;
+    overflow: visible;
 }
 
 .logo {
     display: flex;
     align-items: center;
-    padding: 0 var(--md-sys-spacing-24);
+    justify-content: center;
+    padding: 0 16px;
     margin-bottom: var(--md-sys-spacing-32);
     height: 48px;
-    overflow: hidden;
-    white-space: nowrap;
 }
 
 .logoIcon {
@@ -39,43 +33,31 @@
     justify-content: center;
     align-items: center;
     min-width: 32px;
-    /* Centers icon correctly when collapsed */
-    margin-right: var(--md-sys-spacing-24);
+    color: var(--md-sys-color-primary);
 }
 
+/* Logo text is hidden on desktop (icon-only rail) */
 .logoText {
-    font-family: var(--md-sys-typescale-title-large-font);
-    font-size: var(--md-sys-typescale-title-large-size);
-    font-weight: var(--md-sys-typescale-title-large-weight);
-    letter-spacing: var(--md-sys-typescale-title-large-tracking);
-    color: var(--md-sys-color-on-surface);
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.nav:hover .logoText {
-    opacity: 1;
+    display: none;
 }
 
 .destinations {
     display: flex;
     flex-direction: column;
-    gap: var(--md-sys-spacing-8);
-    padding: 0 var(--md-sys-spacing-12);
-    /* Rail items have 12px horizontal padding */
+    gap: var(--md-sys-spacing-4);
+    padding: 0 8px;
 }
 
 .item {
     display: flex;
     align-items: center;
-    height: 56px;
-    border-radius: var(--md-sys-shape-corner-full);
+    justify-content: center;
+    height: 48px;
+    border-radius: var(--md-sys-shape-corner-medium);
     color: var(--md-sys-color-on-surface-variant);
     text-decoration: none;
-    padding: 0 var(--md-sys-spacing-12);
+    padding: 0;
     position: relative;
-    overflow: hidden;
-    white-space: nowrap;
 }
 
 /* State layer for hover */
@@ -85,8 +67,9 @@
     inset: 0;
     background-color: var(--md-sys-color-on-surface);
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.15s;
     pointer-events: none;
+    border-radius: inherit;
 }
 
 .item:hover::after {
@@ -97,24 +80,32 @@
     opacity: var(--md-sys-state-pressed);
 }
 
+/* CSS tooltip on hover (desktop only) */
+@media (min-width: 768px) {
+    .item:hover .label {
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+}
+
 /* Active State */
 .active {
-    color: var(--md-sys-color-on-secondary-container);
-    font-weight: 600;
+    color: var(--md-sys-color-primary);
 }
 
-/* Active background pill */
-.active::before {
-    content: "";
+/* Active background pill via Framer Motion */
+.activePill {
     position: absolute;
-    inset: 0;
+    inset: 4px;
     background-color: var(--md-sys-color-secondary-container);
-    z-index: -1;
+    border-radius: var(--md-sys-shape-corner-medium);
+    z-index: 0;
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* We don't want the regular hover state layer when active, we want a primary colored one */
 .active::after {
-    background-color: var(--md-sys-color-on-secondary-container);
+    background-color: var(--md-sys-color-primary);
 }
 
 .icon {
@@ -123,26 +114,33 @@
     justify-content: center;
     align-items: center;
     min-width: 32px;
-    margin-right: var(--md-sys-spacing-24);
+    z-index: 1;
 }
 
+/* Label as tooltip positioned to the right of the rail */
 .label {
-    font-family: var(--md-sys-typescale-label-large-font);
-    font-size: var(--md-sys-typescale-label-large-size);
-    letter-spacing: var(--md-sys-typescale-label-large-tracking);
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateX(-4px) translateY(-50%);
+    background-color: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+    font-family: var(--md-sys-typescale-label-medium-font);
+    font-size: var(--md-sys-typescale-label-medium-size);
+    padding: 6px 12px;
+    border-radius: var(--md-sys-shape-corner-small);
+    white-space: nowrap;
     opacity: 0;
-    transition: opacity 0.2s;
-}
-
-/* Show labels when nav is hovered (desktop) */
-.nav:hover .label {
-    opacity: 1;
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 9999;
+    box-shadow: var(--md-sys-elevation-2);
 }
 
 .divider {
     height: 1px;
     background-color: var(--md-sys-color-outline-variant);
-    margin: var(--md-sys-spacing-8) 0;
+    margin: var(--md-sys-spacing-8) 8px;
 }
 
 .spacer {
@@ -154,8 +152,7 @@
     .nav {
         flex-direction: row;
         width: 100vw;
-        height: 80px;
-        /* Navigation Bar height */
+        height: 72px;
         border-right: none;
         border-top: 1px solid var(--md-sys-color-outline-variant);
         padding: 0;
@@ -163,17 +160,12 @@
         bottom: 0;
         left: 0;
         background-color: var(--md-sys-color-surface-container);
-        /* Ensure it doesn't expand on hover */
-    }
-
-    .nav:hover {
-        width: 100vw;
+        overflow: hidden;
     }
 
     .logo,
     .divider,
-    .spacer,
-    .nav:hover .logoText {
+    .spacer {
         display: none;
     }
 
@@ -184,6 +176,7 @@
         width: 100%;
         padding: 0;
         margin: 0;
+        gap: 0;
     }
 
     .item {
@@ -195,29 +188,31 @@
         border-radius: var(--md-sys-shape-corner-extra-small);
     }
 
-    .active::before {
+    .activePill {
         inset: 12px 0 32px 0;
-        /* pill shape just around the icon */
-        border-radius: 16px;
     }
 
     .icon {
-        margin: 0 0 4px 0;
+        margin: 0 0 2px 0;
         z-index: 1;
     }
 
-    /* Labels are always visible on mobile, but smaller */
-    .label,
-    .nav:hover .label {
+    /* Labels visible on mobile as small text below icons */
+    .label {
+        position: static;
+        transform: none;
+        background: none;
+        box-shadow: none;
+        display: block;
         opacity: 1;
-        font-size: 12px;
-        margin-top: 4px;
+        font-size: 11px;
+        padding: 0;
         text-align: center;
+        color: inherit;
+        pointer-events: auto;
     }
 
-    /* Settings icon explicitly shown in bottom bar */
     .item:last-child {
         display: flex;
-        /* Ensure it is part of the layout */
     }
 }

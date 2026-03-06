@@ -1,4 +1,14 @@
 import { NavLink } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+    Map,
+    Image,
+    Images,
+    Plane,
+    Users,
+    Settings,
+    MapPin
+} from 'lucide-react';
 import styles from './Navigation.module.css';
 
 /**
@@ -12,7 +22,9 @@ export const Navigation = () => {
     return (
         <nav className={styles.nav}>
             <div className={styles.logo}>
-                <span className={styles.logoIcon}>📍</span>
+                <span className={styles.logoIcon}>
+                    <MapPin size={24} color="var(--md-sys-color-primary)" />
+                </span>
                 <span className={styles.logoText}>TravelMap</span>
             </div>
 
@@ -23,8 +35,19 @@ export const Navigation = () => {
                         isActive ? `${styles.item} ${styles.active}` : styles.item
                     }
                 >
-                    <span className={styles.icon}>🗺️</span>
-                    <span className={styles.label}>Map</span>
+                    {({ isActive }) => (
+                        <>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="navPill"
+                                    className={styles.activePill}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <span className={styles.icon}><Map size={24} /></span>
+                            <span className={styles.label}>Map</span>
+                        </>
+                    )}
                 </NavLink>
 
                 <NavLink
@@ -33,8 +56,19 @@ export const Navigation = () => {
                         isActive ? `${styles.item} ${styles.active}` : styles.item
                     }
                 >
-                    <span className={styles.icon}>🏞️</span>
-                    <span className={styles.label}>Albums</span>
+                    {({ isActive }) => (
+                        <>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="navPill"
+                                    className={styles.activePill}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <span className={styles.icon}><Images size={24} /></span>
+                            <span className={styles.label}>Albums</span>
+                        </>
+                    )}
                 </NavLink>
 
                 <NavLink
@@ -43,8 +77,19 @@ export const Navigation = () => {
                         isActive ? `${styles.item} ${styles.active}` : styles.item
                     }
                 >
-                    <span className={styles.icon}>📷</span>
-                    <span className={styles.label}>Photos</span>
+                    {({ isActive }) => (
+                        <>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="navPill"
+                                    className={styles.activePill}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <span className={styles.icon}><Image size={24} /></span>
+                            <span className={styles.label}>Photos</span>
+                        </>
+                    )}
                 </NavLink>
 
                 <div className={styles.divider} />
@@ -55,8 +100,19 @@ export const Navigation = () => {
                         isActive ? `${styles.item} ${styles.active}` : styles.item
                     }
                 >
-                    <span className={styles.icon}>✈️</span>
-                    <span className={styles.label}>Trips</span>
+                    {({ isActive }) => (
+                        <>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="navPill"
+                                    className={styles.activePill}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <span className={styles.icon}><Plane size={24} /></span>
+                            <span className={styles.label}>Trips</span>
+                        </>
+                    )}
                 </NavLink>
 
                 <NavLink
@@ -65,8 +121,19 @@ export const Navigation = () => {
                         isActive ? `${styles.item} ${styles.active}` : styles.item
                     }
                 >
-                    <span className={styles.icon}>👥</span>
-                    <span className={styles.label}>People</span>
+                    {({ isActive }) => (
+                        <>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="navPill"
+                                    className={styles.activePill}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <span className={styles.icon}><Users size={24} /></span>
+                            <span className={styles.label}>People</span>
+                        </>
+                    )}
                 </NavLink>
             </div>
 
@@ -78,8 +145,19 @@ export const Navigation = () => {
                     isActive ? `${styles.item} ${styles.active}` : styles.item
                 }
             >
-                <span className={styles.icon}>⚙️</span>
-                <span className={styles.label}>Settings</span>
+                {({ isActive }) => (
+                    <>
+                        {isActive && (
+                            <motion.div
+                                layoutId="navPill"
+                                className={styles.activePill}
+                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            />
+                        )}
+                        <span className={styles.icon}><Settings size={24} /></span>
+                        <span className={styles.label}>Settings</span>
+                    </>
+                )}
             </NavLink>
         </nav>
     );

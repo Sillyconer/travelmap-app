@@ -9,6 +9,10 @@
     color-scheme: dark;
 }
 
+:root[data-theme='positron'] {
+    color-scheme: light;
+}
+
 *,
 *::before,
 *::after {

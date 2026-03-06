@@ -54,7 +54,7 @@
     left: var(--md-sys-spacing-16);
     top: 50%;
     transform: translateY(-50%);
-    background-color: var(--md-sys-color-surface);
+    background-color: var(--md-sys-color-surface-container-high);
     /* Masks the border line behind it */
     padding: 0 4px;
     /* Small padding so line doesn't cut right to the letter */

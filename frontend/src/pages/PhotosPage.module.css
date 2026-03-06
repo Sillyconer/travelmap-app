@@ -1,0 +1,204 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: var(--md-sys-color-background);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background-color: var(--md-sys-color-surface);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    z-index: 10;
+}
+
+.header h1 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin: 0;
+    color: var(--md-sys-color-on-surface);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.selectionCount {
+    color: var(--md-sys-color-primary);
+    font-weight: 500;
+}
+
+.btnBase {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.selectBtn {
+    background-color: transparent;
+    color: var(--md-sys-color-primary);
+}
+
+.selectBtn:hover:not(:disabled) {
+    background-color: rgba(var(--md-sys-color-primary-rgb), 0.08);
+}
+
+.downloadBtn {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.downloadBtn:hover:not(:disabled) {
+    box-shadow: var(--md-sys-elevation-1);
+    background-color: var(--md-sys-color-primary-hover);
+}
+
+.downloadBtn:disabled {
+    background-color: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.cancelBtn {
+    background-color: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.cancelBtn:hover {
+    background-color: var(--md-sys-color-surface-variant);
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.emptyState {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.groupLabel {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    margin: 0;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.photoContainer {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    background-color: var(--md-sys-color-surface-container-high);
+}
+
+.photoContainer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: transparent;
+    transition: background-color 0.2s;
+}
+
+.photoContainer:hover::after {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.photoContainer.selected::after {
+    background-color: rgba(var(--md-sys-color-primary-rgb), 0.2);
+}
+
+.thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.noLocationBadge {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background-color: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+}
+
+.selectionOverlay {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkIcon {
+    color: var(--md-sys-color-primary);
+    font-size: 24px;
+    background-color: var(--md-sys-color-on-primary);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.loading {
+    display: flex;
+    height: 100vh;
+    align-items: center;
+    justify-content: center;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 1.1rem;
+}
+
+.uploadBtn {
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+}
+
+.uploadBtn:hover:not(:disabled) {
+    box-shadow: var(--md-sys-elevation-1);
+}

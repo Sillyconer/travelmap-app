@@ -1,8 +1,9 @@
-import { ReactNode, useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import styles from './Modal.module.css';
 import { Button } from './Button';
+import { X } from 'lucide-react';
 
 interface ModalProps {
     isOpen: boolean;
@@ -82,7 +83,7 @@ export const Modal = ({
                                 className={styles.closeBtn}
                                 aria-label="Close dialog"
                             >
-                                ✕
+                                <X size={20} />
                             </Button>
                         </div>
 

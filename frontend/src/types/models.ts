@@ -7,6 +7,15 @@ export interface Person {
     id: number;
     name: string;
     color: string;
+    isOwner?: boolean;
+}
+
+export interface User {
+    id: number;
+    username: string;
+    displayName: string;
+    personId: number;
+    createdAt: string;
 }
 
 export interface Place {
@@ -17,7 +26,7 @@ export interface Place {
     note: string;
 }
 
-export interface Photo {
+export interface PhotoOut {
     id: number;
     name: string;
     filename: string;
@@ -32,6 +41,11 @@ export interface Photo {
     thumbUrl: string;
 }
 
+export interface LibraryPhoto extends PhotoOut {
+    tripId: number | null;
+    tripName: string;
+}
+
 export interface Trip {
     id: number;
     name: string;
@@ -43,13 +57,13 @@ export interface Trip {
     endDate: string;
     rating: number;
     places: Place[];
-    photos: Photo[];
+    photos: PhotoOut[];
     personIds: number[];
 }
 
 // ── Update Payloads ──
 
-export type TripCreate = Pick<Trip, 'name' | 'color'>;
+export type TripCreate = Pick<Trip, 'name' | 'color' | 'budget' | 'description' | 'startDate' | 'endDate'>;
 export type TripUpdate = Partial<Omit<Trip, 'id' | 'places' | 'photos' | 'personIds'>>;
 
 export type PlaceCreate = Pick<Place, 'name' | 'lat' | 'lng' | 'note'>;

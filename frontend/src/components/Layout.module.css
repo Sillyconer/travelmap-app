@@ -1,33 +1,52 @@
-/*
- * TravelMap — Layout Styles
- */
-
 .layout {
     display: flex;
-    min-height: 100vh;
-    width: 100%;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: var(--md-sys-color-background);
 }
 
 .main {
-    flex-grow: 1;
+    flex: 1;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    /* prevents scrollbars on the main element itself */
     position: relative;
-    /* Allow the main area to scroll independently of the nav */
-    height: 100vh;
-    overflow-y: auto;
-    overflow-x: hidden;
-    background-color: var(--md-sys-color-surface);
 }
 
-/* ── Mobile Layout (<768px) ── */
-@media (max-width: 767px) {
-    .layout {
-        flex-direction: column;
-    }
+.pageTransitionWrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    /* Allow the content inside to scroll */
+}
 
-    .main {
-        /* Leave space for the fixed bottom navigation bar */
-        height: calc(100vh - 80px);
+/* Base styles for M3 dark theme scrollbars globally */
+:global(::-webkit-scrollbar) {
+    width: 8px;
+    height: 8px;
+}
+
+:global(::-webkit-scrollbar-track) {
+    background: transparent;
+}
+
+:global(::-webkit-scrollbar-thumb) {
+    background: var(--md-sys-color-outline-variant);
+    border-radius: 4px;
+}
+
+:global(::-webkit-scrollbar-thumb:hover) {
+    background: var(--md-sys-color-outline);
+}
+
+@media (max-width: 768px) {
+    .layout {
+        flex-direction: column-reverse;
+        /* Put bottom nav bar over the main content */
     }
 }

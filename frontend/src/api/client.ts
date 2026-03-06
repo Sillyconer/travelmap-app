@@ -1,4 +1,15 @@
-import { Trip, TripCreate, TripUpdate, Person, PersonCreate, PersonUpdate, PlaceCreate, PlaceUpdate } from '../types/models';
+import type { Trip, TripCreate, TripUpdate, Person, PersonCreate, PersonUpdate, Place, PlaceCreate, PlaceUpdate, User } from '../types/models';
+
+function getStoredToken(): string | null {
+    const raw = localStorage.getItem('travelmap-auth');
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        return parsed?.state?.token ?? null;
+    } catch {
+        return null;
+    }
+}
 
 /**
  * TravelMap — API Client
@@ -16,10 +27,12 @@ class ApiError extends Error {
 }
 
 async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const token = getStoredToken();
     const res = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
         headers: {
             ...(!(options?.body instanceof FormData) && { 'Content-Type': 'application/json' }),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
             ...options?.headers,
         },
     });
@@ -52,8 +65,8 @@ export const updatePerson = (id: number, data: PersonUpdate) => fetcher<Person>(
 export const deletePerson = (id: number) => fetcher<{ ok: boolean }>(`/persons/${id}`, { method: 'DELETE' });
 
 // ── Places ──
-export const createPlace = (tripId: number, data: PlaceCreate) => fetcher<Location>(`/trips/${tripId}/places`, { method: 'POST', body: JSON.stringify(data) });
-export const updatePlace = (tripId: number, placeId: number, data: PlaceUpdate) => fetcher<Location>(`/trips/${tripId}/places/${placeId}/update`, { method: 'POST', body: JSON.stringify(data) });
+export const createPlace = (tripId: number, data: PlaceCreate) => fetcher<Place>(`/trips/${tripId}/places`, { method: 'POST', body: JSON.stringify(data) });
+export const updatePlace = (tripId: number, placeId: number, data: PlaceUpdate) => fetcher<Place>(`/trips/${tripId}/places/${placeId}/update`, { method: 'POST', body: JSON.stringify(data) });
 export const deletePlace = (tripId: number, placeId: number) => fetcher<{}>(`/trips/${tripId}/places/${placeId}`, { method: 'DELETE' });
 export const reorderPlaces = (tripId: number, orderedIds: number[]) => fetcher<Trip>(`/trips/${tripId}/places/reorder`, { method: 'POST', body: JSON.stringify({ order: orderedIds.join(',') }) });
 
@@ -65,3 +78,20 @@ export const updatePhoto = (tripId: number, photoId: number, placeId: number | n
 export const deletePhoto = (tripId: number, photoId: number) => fetcher<{}>(`/trips/${tripId}/photos/${photoId}`, { method: 'DELETE' });
 export const getAllPhotos = () => fetcher<any[]>('/photos');
 export const clearAllPhotos = () => fetcher<{ removed: number }>('/photos', { method: 'DELETE' });
+export const uploadUnattachedPhoto = (formData: FormData) => fetcher<any>('/photos/upload', { method: 'POST', body: formData });
+export const assignPhoto = (photoId: number, tripId: number | null, placeId: number | null) =>
+    fetcher<any>(`/photos/${photoId}/assign`, { method: 'POST', body: JSON.stringify({ tripId, placeId }) });
+
+// ── Auth ──
+export const register = (data: { username: string; displayName: string; password: string }) =>
+    fetcher<{ token: string; user: User }>('/auth/register', { method: 'POST', body: JSON.stringify(data) });
+export const login = (data: { username: string; password: string }) =>
+    fetcher<{ token: string; user: User }>('/auth/login', { method: 'POST', body: JSON.stringify(data) });
+export const getMe = () => fetcher<User>('/auth/me');
+
+// ── Share Links ──
+export const createShareLink = (data: { type: string; photoId?: number; tripId?: number }) =>
+    fetcher<{ token: string; url: string }>('/share', { method: 'POST', body: JSON.stringify(data) });
+export const resolveShareLink = (token: string) => fetcher<any>(`/share/${token}`);
+export const revokeShareLink = (token: string) => fetcher<{ ok: boolean }>(`/share/${token}`, { method: 'DELETE' });
+

@@ -1,0 +1,236 @@
+/*
+ * TravelMap — Trip Detail Page Styles
+ */
+
+.container {
+    padding: var(--md-sys-spacing-24);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--md-sys-spacing-32);
+}
+
+.headerTitleRow {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-16);
+}
+
+.backBtn {
+    margin-left: -12px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.titleGroup {
+    display: flex;
+    align-items: center;
+    gap: var(--md-sys-spacing-12);
+}
+
+.colorDot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+.title {
+    margin: 0;
+    font-family: var(--md-sys-typescale-display-small-font);
+    font-size: var(--md-sys-typescale-display-small-size);
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    padding: var(--md-sys-spacing-48);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.contentGrid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--md-sys-spacing-32);
+}
+
+/* ── Timeline ── */
+
+.placesSection {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-16);
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    padding-bottom: var(--md-sys-spacing-8);
+}
+
+.sectionHeader h2 {
+    margin: 0;
+    font-size: var(--md-sys-typescale-title-large-size);
+}
+
+.placesList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-8);
+}
+
+.placeCard {
+    display: flex !important;
+    flex-direction: row;
+    padding: var(--md-sys-spacing-16) !important;
+    gap: var(--md-sys-spacing-16);
+    background-color: var(--md-sys-color-surface) !important;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    box-shadow: none !important;
+}
+
+.timelineNode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 24px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.nodeCircle {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 4px solid;
+    background-color: var(--md-sys-color-surface);
+    z-index: 2;
+    margin-top: 4px;
+    /* Align with title text */
+}
+
+.nodeLine {
+    position: absolute;
+    top: 20px;
+    bottom: -40px;
+    /* Extend past card into next card gap */
+    width: 2px;
+    background-color: var(--md-sys-color-outline-variant);
+    z-index: 1;
+}
+
+.placeContent {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.placeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--md-sys-spacing-8);
+}
+
+.placeHeader h3 {
+    margin: 0;
+    font-size: var(--md-sys-typescale-title-medium-size);
+}
+
+.placeActions {
+    margin-top: -8px;
+    margin-right: -8px;
+}
+
+.placeNote {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-body-medium-size);
+    margin-bottom: var(--md-sys-spacing-8);
+}
+
+.placeCoords {
+    font-family: monospace;
+    font-size: var(--md-sys-typescale-label-small-size);
+    color: var(--md-sys-color-outline);
+}
+
+.emptyState {
+    text-align: center;
+    padding: var(--md-sys-spacing-48);
+    color: var(--md-sys-color-on-surface-variant);
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: var(--md-sys-shape-corner-medium);
+}
+
+/* ── Meta Right Column ── */
+
+.metaSection {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-16);
+}
+
+.metaCard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-16);
+}
+
+.metaCard h3 {
+    margin: 0;
+    font-size: var(--md-sys-typescale-title-medium-size);
+}
+
+.metaRow {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed var(--md-sys-color-outline-variant);
+    padding-bottom: var(--md-sys-spacing-8);
+}
+
+.metaLabel {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.metaValue {
+    font-weight: 500;
+}
+
+/* ── Form ── */
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-24);
+    padding-top: var(--md-sys-spacing-8);
+}
+
+.coordRow {
+    display: flex;
+    gap: var(--md-sys-spacing-16);
+}
+
+.helperText {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-body-small-size);
+    margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .contentGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        gap: var(--md-sys-spacing-16);
+    }
+}

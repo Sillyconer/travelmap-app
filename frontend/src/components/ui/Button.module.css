@@ -1,5 +1,8 @@
 /*
  * TravelMap — M3 Button Styles
+ *
+ * Clean, solid colors with subtle hover brightening.
+ * No gradients, no fuss.
  */
 
 .base {
@@ -9,15 +12,22 @@
     gap: var(--md-sys-spacing-8);
     font-family: var(--md-sys-typescale-label-large-font);
     font-size: var(--md-sys-typescale-label-large-size);
-    font-weight: var(--md-sys-typescale-label-large-weight);
+    font-weight: 500;
     letter-spacing: var(--md-sys-typescale-label-large-tracking);
-    border-radius: var(--md-sys-shape-corner-full);
-    transition: background-color 0.2s, box-shadow 0.2s, color 0.2s;
+    border-radius: var(--md-sys-shape-corner-medium);
+    transition: all 0.15s ease;
     position: relative;
     overflow: hidden;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
 }
 
-/* Base sizing */
+.base:active {
+    transform: scale(0.97);
+}
+
+/* Sizing */
 .sm {
     height: 32px;
     padding: 0 var(--md-sys-spacing-16);
@@ -37,14 +47,14 @@
     width: 100%;
 }
 
-/* State Layer (Overlay div simulator without extra markup via ::after) */
+/* State Layer */
 .base::after {
     content: "";
     position: absolute;
     inset: 0;
     background-color: currentColor;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.15s;
     pointer-events: none;
 }
 
@@ -67,34 +77,49 @@
 
 /* ── Variants ── */
 
-/* 1. Filled */
+/* Filled */
 .filled {
     background-color: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
+    box-shadow: var(--md-sys-elevation-1);
 }
 
-/* 2. Tonal */
+.filled:hover {
+    box-shadow: var(--md-sys-elevation-2);
+}
+
+/* Tonal */
 .tonal {
     background-color: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
 }
 
-/* 3. Outlined */
+.tonal:hover {
+    box-shadow: var(--md-sys-elevation-1);
+}
+
+/* Outlined */
 .outlined {
     background-color: transparent;
-    color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-surface);
     border: 1px solid var(--md-sys-color-outline);
+    box-shadow: none;
 }
 
 .outlined:hover {
+    background-color: rgba(255, 255, 255, 0.04);
     border-color: var(--md-sys-color-primary);
-    /* Focus indicator on hover */
+    color: var(--md-sys-color-primary);
 }
 
-/* 4. Text */
+/* Text */
 .text {
     background-color: transparent;
-    color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-surface-variant);
     padding: 0 var(--md-sys-spacing-12);
-    /* Text buttons have less padding */
+    box-shadow: none;
+}
+
+.text:hover {
+    color: var(--md-sys-color-primary);
 }

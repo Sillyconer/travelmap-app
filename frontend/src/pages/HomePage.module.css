@@ -1,0 +1,27 @@
+.layout {
+    display: flex;
+    height: 100vh;
+    /* Fill the whole screen below the header, assuming header is absolute or part of Layout */
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .layout {
+        flex-direction: column-reverse;
+    }
+}
+
+.toggleBtn {
+    box-shadow: var(--md-sys-elevation-3);
+}
+
+@media (max-width: 768px) {
+    .toggleBtn {
+        top: 16px !important;
+        right: 16px !important;
+    }
+}

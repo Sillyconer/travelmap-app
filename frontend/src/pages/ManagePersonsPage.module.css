@@ -1,0 +1,177 @@
+/*
+ * TravelMap — Manage Persons Page Styles
+ */
+
+.container {
+    padding: var(--md-sys-spacing-24);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--md-sys-spacing-32);
+}
+
+.title {
+    margin-bottom: var(--md-sys-spacing-4);
+}
+
+.subtitle {
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: var(--md-sys-typescale-body-large-font);
+    font-size: var(--md-sys-typescale-body-large-size);
+    margin: 0;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    padding: var(--md-sys-spacing-48);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--md-sys-spacing-24);
+}
+
+.personCard {
+    display: flex !important;
+    /* Override card base styles for horizontal layout */
+    flex-direction: row !important;
+    align-items: center;
+    gap: var(--md-sys-spacing-16);
+    padding: var(--md-sys-spacing-16);
+}
+
+.ownerCard {
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
+    background-color: color-mix(in srgb, var(--md-sys-color-primary-container) 35%, var(--md-sys-color-surface-container));
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--md-sys-typescale-headline-small-font);
+    font-size: var(--md-sys-typescale-title-large-size);
+    font-weight: 500;
+    color: #ffffff;
+    /* White text usually works well with random vibrant colors */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    /* Ensure readable even if color is light */
+    flex-shrink: 0;
+}
+
+.cardContent {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.personName {
+    font-family: var(--md-sys-typescale-title-medium-font);
+    font-size: var(--md-sys-typescale-title-medium-size);
+    font-weight: var(--md-sys-typescale-title-medium-weight);
+    color: var(--md-sys-color-on-surface);
+    margin: 0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.ownerBadge {
+    margin: 4px 0 0;
+    color: var(--md-sys-color-primary);
+    font-size: var(--md-sys-typescale-label-medium-size);
+    font-weight: 600;
+}
+
+.actions {
+    flex-shrink: 0;
+}
+
+.emptyState {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--md-sys-spacing-64) 0;
+    color: var(--md-sys-color-on-surface-variant);
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: var(--md-sys-shape-corner-medium);
+}
+
+/* ── Create Modal Forms (Reused from Trips) ── */
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-24);
+    padding-top: var(--md-sys-spacing-8);
+}
+
+.colorPickerGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-8);
+}
+
+.colorLabel {
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+}
+
+.colorRow {
+    display: flex;
+    align-items: center;
+    gap: var(--md-sys-spacing-16);
+}
+
+.colorInput {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 48px;
+    height: 48px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.colorInput::-webkit-color-swatch {
+    border-radius: 50%;
+    border: 2px solid var(--md-sys-color-outline-variant);
+}
+
+.colorInput::-moz-color-swatch {
+    border-radius: 50%;
+    border: 2px solid var(--md-sys-color-outline-variant);
+}
+
+.colorHex {
+    font-family: monospace;
+    font-size: var(--md-sys-typescale-title-medium-size);
+    color: var(--md-sys-color-on-surface);
+}
+
+.helperText {
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: var(--md-sys-typescale-body-small-font);
+    font-size: var(--md-sys-typescale-body-small-size);
+    margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        gap: var(--md-sys-spacing-16);
+    }
+}

@@ -1,27 +1,50 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { ManageTripsPage } from './pages/ManageTripsPage';
+import { TripDetailPage } from './pages/TripDetailPage';
+import { ManagePersonsPage } from './pages/ManagePersonsPage';
+import { HomePage } from './pages/HomePage';
+import { PhotosPage } from './pages/PhotosPage';
+import { AlbumsPage } from './pages/AlbumsPage';
+import { AlbumDetailPage } from './pages/AlbumDetailPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { SharePage } from './pages/SharePage';
+import { LoginPage } from './pages/LoginPage';
+import { useAuthStore } from './store/useAuthStore';
 
-// Placeholder Pages
-const MapPage = () => <div style={{ padding: 24 }}><h2>Map View</h2><p>Coming in Phase 3.</p></div>;
-const AlbumsPage = () => <div style={{ padding: 24 }}><h2>Albums</h2><p>Coming in Phase 5.</p></div>;
-const PhotosPage = () => <div style={{ padding: 24 }}><h2>Photos</h2><p>Coming in Phase 5.</p></div>;
-const TripsPage = () => <div style={{ padding: 24 }}><h2>Manage Trips</h2><p>Coming in Phase 2.</p></div>;
-const PeoplePage = () => <div style={{ padding: 24 }}><h2>People</h2><p>Coming in Phase 2.</p></div>;
-const SettingsPage = () => <div style={{ padding: 24 }}><h2>Settings</h2><p>Coming in Phase 6.</p></div>;
+const ProtectedLayout = () => {
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  return isAuthenticated ? <Layout /> : <Navigate to="/login" replace />;
+};
 
 function App() {
+  const loadMe = useAuthStore(s => s.loadMe);
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+
+  useEffect(() => {
+    loadMe();
+  }, [loadMe]);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<MapPage />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
+
+        <Route path="/" element={<ProtectedLayout />}>
+          <Route index element={<HomePage />} />
           <Route path="albums" element={<AlbumsPage />} />
+          <Route path="albums/:id" element={<AlbumDetailPage />} />
           <Route path="photos" element={<PhotosPage />} />
-          <Route path="trips" element={<TripsPage />} />
-          <Route path="people" element={<PeoplePage />} />
+          <Route path="trips" element={<ManageTripsPage />} />
+          <Route path="trips/:id" element={<TripDetailPage />} />
+          <Route path="people" element={<ManagePersonsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
+
+        {/* Share page — standalone, outside Layout (no sidebar) */}
+        <Route path="/s/:token" element={<SharePage />} />
       </Routes>
     </BrowserRouter>
   );

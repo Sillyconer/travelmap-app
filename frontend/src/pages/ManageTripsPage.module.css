@@ -1,0 +1,166 @@
+/*
+ * TravelMap — Manage Trips Page Styles
+ *
+ * Trip cards use a left-edge bookmark strip with gradient tint.
+ */
+
+.container {
+    padding: var(--md-sys-spacing-32) var(--md-sys-spacing-24);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--md-sys-spacing-32);
+}
+
+.title {
+    margin-bottom: var(--md-sys-spacing-4);
+}
+
+.subtitle {
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: var(--md-sys-typescale-body-large-font);
+    font-size: var(--md-sys-typescale-body-large-size);
+    margin: 0;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    padding: var(--md-sys-spacing-48);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--md-sys-spacing-24);
+}
+
+/* ── Trip Card ── */
+
+.tripCard {
+    padding: 0 !important;
+    display: flex;
+    flex-direction: row;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+/* Left bookmark strip instead of top color bar */
+.colorStrip {
+    width: 6px;
+    flex-shrink: 0;
+    border-radius: var(--md-sys-shape-corner-medium) 0 0 var(--md-sys-shape-corner-medium);
+}
+
+.cardContent {
+    padding: var(--md-sys-spacing-16) var(--md-sys-spacing-24);
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: var(--md-sys-spacing-8);
+}
+
+.tripName {
+    font-family: var(--md-sys-typescale-title-large-font);
+    font-size: var(--md-sys-typescale-title-large-size);
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+    margin: 0;
+}
+
+.stats {
+    display: flex;
+    gap: var(--md-sys-spacing-16);
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-body-medium-size);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--md-sys-spacing-12);
+    margin-top: var(--md-sys-spacing-8);
+}
+
+.emptyState {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--md-sys-spacing-64) var(--md-sys-spacing-24);
+    color: var(--md-sys-color-on-surface-variant);
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: var(--md-sys-shape-corner-medium);
+    border: 1px dashed var(--md-sys-color-outline-variant);
+}
+
+/* ── Create Modal Forms ── */
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-24);
+    padding-top: var(--md-sys-spacing-8);
+}
+
+.colorPickerGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-8);
+}
+
+.colorLabel {
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+}
+
+.colorRow {
+    display: flex;
+    align-items: center;
+    gap: var(--md-sys-spacing-16);
+}
+
+.colorInput {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 48px;
+    height: 48px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.colorInput::-webkit-color-swatch {
+    border-radius: 50%;
+    border: 2px solid var(--md-sys-color-outline-variant);
+}
+
+.colorInput::-moz-color-swatch {
+    border-radius: 50%;
+    border: 2px solid var(--md-sys-color-outline-variant);
+}
+
+.colorHex {
+    font-family: monospace;
+    font-size: var(--md-sys-typescale-title-medium-size);
+    color: var(--md-sys-color-on-surface);
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        gap: var(--md-sys-spacing-16);
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}

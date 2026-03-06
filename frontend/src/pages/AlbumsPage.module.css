@@ -1,0 +1,111 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: var(--md-sys-color-background);
+}
+
+.header {
+    padding: 24px 24px 8px;
+    background-color: var(--md-sys-color-surface);
+}
+
+.header h1 {
+    font-size: 2rem;
+    font-weight: 400;
+    margin: 0;
+    color: var(--md-sys-color-on-surface);
+}
+
+.header p {
+    color: var(--md-sys-color-on-surface-variant);
+    margin: 8px 0 0;
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.emptyState {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.albumCard {
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.albumCard:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--md-sys-elevation-3);
+}
+
+.coverContainer {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background-color: var(--md-sys-color-surface-container-high);
+}
+
+.coverImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.placeholderCover {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.5;
+}
+
+.photoCountBadge {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+}
+
+.albumInfo {
+    padding: 16px;
+}
+
+.albumTitle {
+    margin: 0 0 4px;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+}
+
+.albumMeta {
+    font-size: 0.875rem;
+    color: var(--md-sys-color-on-surface-variant);
+}

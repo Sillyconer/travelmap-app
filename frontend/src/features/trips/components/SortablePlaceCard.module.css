@@ -1,0 +1,119 @@
+/*
+ * TravelMap — Sortable Place Card Styles
+ */
+
+.wrapper {
+    position: relative;
+    touch-action: none;
+}
+
+.placeCard {
+    display: flex !important;
+    flex-direction: row;
+    padding: var(--md-sys-spacing-16) !important;
+    gap: var(--md-sys-spacing-16);
+    background-color: var(--md-sys-color-surface) !important;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    box-shadow: none !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dragging {
+    background-color: var(--md-sys-color-surface-container) !important;
+    border-color: var(--md-sys-color-primary) !important;
+    box-shadow: var(--md-sys-elevation-level3) !important;
+    z-index: 20;
+}
+
+.dragHandle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    padding: 0 var(--md-sys-spacing-4);
+    margin-left: -8px;
+    /* Offset padding to align visually */
+}
+
+.dragHandle:active {
+    cursor: grabbing;
+}
+
+.dragHandle svg {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.placeCard:hover .dragHandle svg {
+    opacity: 1;
+}
+
+.timelineNode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 24px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.nodeCircle {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 4px solid;
+    background-color: var(--md-sys-color-surface);
+    z-index: 2;
+    margin-top: 4px;
+    /* Align with title text */
+}
+
+.nodeLine {
+    position: absolute;
+    top: 20px;
+    bottom: -40px;
+    /* Extend past card into next card gap */
+    width: 2px;
+    background-color: var(--md-sys-color-outline-variant);
+    z-index: 1;
+}
+
+/* Hide line while dragging so it doesn't look broken */
+.dragging .nodeLine {
+    display: none;
+}
+
+.placeContent {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.placeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--md-sys-spacing-8);
+}
+
+.placeHeader h3 {
+    margin: 0;
+    font-size: var(--md-sys-typescale-title-medium-size);
+}
+
+.placeActions {
+    margin-top: -8px;
+    margin-right: -8px;
+}
+
+.placeNote {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-body-medium-size);
+    margin-bottom: var(--md-sys-spacing-8);
+}
+
+.placeCoords {
+    font-family: monospace;
+    font-size: var(--md-sys-typescale-label-small-size);
+    color: var(--md-sys-color-outline);
+}
