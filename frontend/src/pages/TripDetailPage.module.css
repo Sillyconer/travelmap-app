@@ -405,6 +405,11 @@
     text-decoration: underline;
 }
 
+.ownerBadge {
+    color: var(--md-sys-color-primary);
+    font-size: 0.95em;
+}
+
 .commentHeader small {
     color: var(--md-sys-color-on-surface-variant);
 }

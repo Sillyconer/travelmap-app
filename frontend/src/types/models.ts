@@ -34,7 +34,7 @@ export interface Friend {
 }
 
 export interface TripMember extends Friend {
-    role: 'viewer' | 'editor';
+    role: 'owner' | 'viewer' | 'editor';
 }
 
 export interface FriendRequest {

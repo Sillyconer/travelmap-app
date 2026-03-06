@@ -689,9 +689,12 @@ export const TripDetailPage = () => {
                                         onClick={() => navigate(`/profiles/${member.username}`)}
                                     >
                                         <Avatar seed={member.username} name={member.displayName} imageUrl={member.avatarUrl} size={30} />
-                                        <span>{member.displayName} (@{member.username}) · {member.role}</span>
+                                        <span>
+                                            {member.displayName} (@{member.username}) · {member.role}
+                                            {member.role === 'owner' && <span className={styles.ownerBadge} title="Owner"> 👑</span>}
+                                        </span>
                                     </button>
-                                    {isOwner && (
+                                    {isOwner && member.role !== 'owner' && (
                                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                             <select
                                                 value={member.role}

@@ -2475,17 +2475,42 @@ class Store:
         return cursor.rowcount > 0
 
     async def list_trip_members(self, trip_id: int) -> list[TripMemberOut]:
-        rows = await self.db.execute_fetchall(
+        async with self.db.execute("SELECT user_id FROM trips WHERE id = ?", (trip_id,)) as cursor:
+            owner_row = await cursor.fetchone()
+        if not owner_row:
+            return []
+
+        owner_user_id = int(owner_row["user_id"])
+        async with self.db.execute("SELECT * FROM users WHERE id = ?", (owner_user_id,)) as cursor:
+            owner_user = await cursor.fetchone()
+
+        member_rows = await self.db.execute_fetchall(
             """
             SELECT u.*, tm.role
             FROM trip_members tm
             JOIN users u ON u.id = tm.user_id
-            WHERE tm.trip_id = ?
+            WHERE tm.trip_id = ? AND tm.user_id != ?
             ORDER BY u.display_name
             """,
-            (trip_id,),
+            (trip_id, owner_user_id),
         )
-        return [
+
+        members: list[TripMemberOut] = []
+        if owner_user:
+            members.append(
+                TripMemberOut(
+                    id=owner_user["id"],
+                    username=owner_user["username"],
+                    displayName=owner_user["display_name"],
+                    avatarUrl=owner_user["avatar_url"] or "",
+                    personId=owner_user["person_id"],
+                    homeCountry=owner_user["home_country"],
+                    homeCurrency=owner_user["home_currency"],
+                    role="owner",
+                )
+            )
+
+        members.extend(
             TripMemberOut(
                 id=r["id"],
                 username=r["username"],
@@ -2496,8 +2521,9 @@ class Store:
                 homeCurrency=r["home_currency"],
                 role=("editor" if (r["role"] or "viewer") == "member" else (r["role"] or "viewer")),
             )
-            for r in rows
-        ]
+            for r in member_rows
+        )
+        return members
 
     async def get_trip_participant_ids(self, trip_id: int) -> list[int]:
         async with self.db.execute("SELECT user_id FROM trips WHERE id = ?", (trip_id,)) as cursor:
