@@ -410,20 +410,10 @@ export const TripDetailPage = () => {
         }
     };
 
-    if (isLoading && !trip) {
-        return <div className={styles.loading}>Loading trip data...</div>;
-    }
-
-    if (!trip) {
-        return (
-            <div className={styles.loading}>
-                {loadError || 'Trip not found or inaccessible.'}
-                <Button variant="text" onClick={() => navigate('/trips')}>Back to trips</Button>
-            </div>
-        );
-    }
-
     const handleShareAlbum = async () => {
+        if (!trip) {
+            return;
+        }
         try {
             const result = await api.createShareLink({ type: 'album', tripId: trip.id });
             const fullUrl = `${window.location.origin}${result.url}`;
@@ -434,8 +424,8 @@ export const TripDetailPage = () => {
         }
     };
 
-    const isOwner = user?.id === trip.ownerUserId;
-    const canEdit = trip.accessRole !== 'viewer';
+    const isOwner = trip ? user?.id === trip.ownerUserId : false;
+    const canEdit = trip ? trip.accessRole !== 'viewer' : false;
 
     const tripExpenseParticipants = useMemo(() => {
         const participantMap = new Map<number, { id: number; name: string }>();
@@ -488,6 +478,19 @@ export const TripDetailPage = () => {
         }
         return Array.from(grouped.entries()).sort((a, b) => a[0] - b[0]);
     })();
+
+    if (isLoading && !trip) {
+        return <div className={styles.loading}>Loading trip data...</div>;
+    }
+
+    if (!trip) {
+        return (
+            <div className={styles.loading}>
+                {loadError || 'Trip not found or inaccessible.'}
+                <Button variant="text" onClick={() => navigate('/trips')}>Back to trips</Button>
+            </div>
+        );
+    }
 
     const handleInviteFriend = async () => {
         if (!selectedFriendId) return;

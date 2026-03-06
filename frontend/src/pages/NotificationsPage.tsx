@@ -86,7 +86,7 @@ export const NotificationsPage = () => {
         }
         const tripId = payload.tripId;
         if (typeof tripId === 'number') {
-            return `/trips/${tripId}`;
+            return '/trips';
         }
 
         const entityType = payload.entityType;
