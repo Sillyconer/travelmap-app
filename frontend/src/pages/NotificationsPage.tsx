@@ -77,7 +77,8 @@ export const NotificationsPage = () => {
             return `/trips/${entityId}`;
         }
         if (entityType === 'photo') {
-            return '/photos';
+            const photoId = typeof payload.photoId === 'number' ? payload.photoId : (typeof entityId === 'number' ? entityId : null);
+            return photoId ? `/photos?photoId=${photoId}&mode=comments` : '/photos';
         }
 
         const username = payload.username;

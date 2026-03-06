@@ -188,6 +188,10 @@ export const unifiedSearch = (query: string, limit = 8) =>
 // ── Comments ──
 export const getComments = (entityType: 'trip' | 'photo', entityId: number, limit = 100) =>
     fetcher<CommentItem[]>(`/comments?entity_type=${encodeURIComponent(entityType)}&entity_id=${entityId}&limit=${limit}`);
+export const getCommentCounts = (entityType: 'trip' | 'photo', entityIds: number[]) =>
+    fetcher<Record<string, number>>(
+        `/comments/counts?entity_type=${encodeURIComponent(entityType)}&entity_ids=${entityIds.map(id => String(id)).join(',')}`,
+    );
 export const createComment = (entityType: 'trip' | 'photo', entityId: number, body: string) =>
     fetcher<CommentItem>('/comments', { method: 'POST', body: JSON.stringify({ entityType, entityId, body }) });
 export const deleteComment = (commentId: number) =>

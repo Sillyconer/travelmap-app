@@ -184,6 +184,24 @@
     cursor: pointer;
 }
 
+.commentCount {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    font-size: 10px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    color: var(--md-sys-color-on-error);
+    background: var(--md-sys-color-error);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
 .commentBadge:hover {
     background: rgba(20, 24, 28, 0.9);
 }

@@ -1562,6 +1562,37 @@ class Store:
             )
         return comments
 
+    async def get_comment_counts(self, user_id: int, entity_type: str, entity_ids: list[int]) -> dict[int, int]:
+        kind = entity_type.strip().lower()
+        if kind not in {"trip", "photo"}:
+            return {}
+        unique_ids = sorted({int(entity_id) for entity_id in entity_ids if int(entity_id) > 0})
+        if not unique_ids:
+            return {}
+
+        accessible_ids: list[int] = []
+        for entity_id in unique_ids:
+            if await self._can_access_comment_entity(user_id, kind, entity_id):
+                accessible_ids.append(entity_id)
+        if not accessible_ids:
+            return {}
+
+        placeholders = ",".join(["?"] * len(accessible_ids))
+        rows = await self.db.execute_fetchall(
+            f"""
+            SELECT entity_id, COUNT(*) AS count
+            FROM comments
+            WHERE entity_type = ?
+              AND entity_id IN ({placeholders})
+            GROUP BY entity_id
+            """,
+            (kind, *accessible_ids),
+        )
+        counts = {entity_id: 0 for entity_id in accessible_ids}
+        for row in rows:
+            counts[int(row["entity_id"])] = int(row["count"])
+        return counts
+
     async def create_comment(self, user_id: int, data: CommentCreate) -> CommentOut:
         entity_type = data.entity_type.strip().lower()
         if entity_type not in {"trip", "photo"}:
@@ -1603,6 +1634,31 @@ class Store:
                     },
                     commit=False,
                 )
+
+            if entity_type == "photo":
+                async with self.db.execute(
+                    "SELECT user_id, trip_id FROM photos WHERE id = ?",
+                    (data.entity_id,),
+                ) as cursor:
+                    photo_row = await cursor.fetchone()
+                if photo_row:
+                    photo_owner_id = int(photo_row["user_id"])
+                    if photo_owner_id != user_id:
+                        await self.create_notification(
+                            photo_owner_id,
+                            "photo_commented",
+                            "New photo comment",
+                            f"{author.display_name} commented on your photo.",
+                            payload={
+                                "photoId": data.entity_id,
+                                "entityType": "photo",
+                                "entityId": data.entity_id,
+                                "tripId": photo_row["trip_id"],
+                                "fromUserId": author.id,
+                                "fromUsername": author.username,
+                            },
+                            commit=False,
+                        )
 
         await self.db.commit()
 

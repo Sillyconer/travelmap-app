@@ -442,3 +442,72 @@ async def test_custom_expense_split_affects_settlement():
         breakdown = payload["expenseBreakdowns"][0]
         assert breakdown["note"] == "Dinner"
         assert len(breakdown["shares"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_photo_comment_notification_and_counts_endpoint():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as owner_client, AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as commenter_client:
+        owner_register = await owner_client.post(
+            "/api/auth/register",
+            json={"username": "photoowner", "displayName": "Photo Owner", "password": "secret"},
+        )
+        commenter_register = await commenter_client.post(
+            "/api/auth/register",
+            json={"username": "photocommenter", "displayName": "Photo Commenter", "password": "secret"},
+        )
+        assert owner_register.status_code == 201
+        assert commenter_register.status_code == 201
+
+        owner_client.headers.update({"Authorization": f"Bearer {owner_register.json()['token']}"})
+        commenter_client.headers.update({"Authorization": f"Bearer {commenter_register.json()['token']}"})
+
+        request = await commenter_client.post("/api/social/friend-requests", json={"username": "photoowner"})
+        assert request.status_code == 201
+        accepted = await owner_client.post(f"/api/social/friend-requests/{request.json()['id']}/accept")
+        assert accepted.status_code == 200
+
+        trip = await owner_client.post(
+            "/api/trips",
+            json={"name": "Photo Notify", "color": "#556677", "visibility": "friends_only"},
+        )
+        assert trip.status_code == 201
+        trip_id = trip.json()["id"]
+
+        invite = await owner_client.post(
+            f"/api/trips/{trip_id}/members/{commenter_register.json()['user']['id']}?role=viewer"
+        )
+        assert invite.status_code == 200
+
+        png_bytes = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfeA\xf4\x8f\x93\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        uploaded = await owner_client.post(
+            "/api/photos/upload",
+            files={"file": ("tiny.png", png_bytes, "image/png")},
+        )
+        assert uploaded.status_code == 201
+        photo_id = uploaded.json()["id"]
+
+        assigned = await owner_client.post(
+            f"/api/photos/{photo_id}/assign",
+            json={"tripId": trip_id},
+        )
+        assert assigned.status_code == 200
+
+        comment = await commenter_client.post(
+            "/api/comments",
+            json={"entityType": "photo", "entityId": photo_id, "body": "Great shot"},
+        )
+        assert comment.status_code == 201
+
+        counts = owner_client.get(f"/api/comments/counts?entity_type=photo&entity_ids={photo_id}")
+        counts_res = await counts
+        assert counts_res.status_code == 200
+        assert counts_res.json().get(str(photo_id)) == 1
+
+        notifications = await owner_client.get("/api/notifications")
+        assert notifications.status_code == 200
+        assert any(n["type"] == "photo_commented" for n in notifications.json())

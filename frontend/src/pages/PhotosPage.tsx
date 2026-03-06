@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import * as api from '../api/client';
 import { Lightbox } from '../components/gallery/Lightbox';
 import { MdDownload, MdLocationOff, MdCheckCircle, MdChatBubbleOutline, MdDeleteOutline } from 'react-icons/md';
@@ -10,6 +11,7 @@ import styles from './PhotosPage.module.css';
 import type { CommentItem, LibraryPhoto, Trip } from '../types/models';
 
 export const PhotosPage = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [photos, setPhotos] = useState<LibraryPhoto[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -31,6 +33,7 @@ export const PhotosPage = () => {
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [commentBody, setCommentBody] = useState('');
     const [isCommentLoading, setIsCommentLoading] = useState(false);
+    const [commentCounts, setCommentCounts] = useState<Record<number, number>>({});
 
     useEffect(() => {
         const loadPhotos = async () => {
@@ -39,6 +42,14 @@ export const PhotosPage = () => {
                 setPhotos(data);
                 const loadedTrips = await api.getTrips();
                 setTrips(loadedTrips);
+                if (data.length > 0) {
+                    const counts = await api.getCommentCounts('photo', data.map(p => p.id));
+                    const parsed: Record<number, number> = {};
+                    for (const [key, value] of Object.entries(counts)) {
+                        parsed[Number(key)] = value;
+                    }
+                    setCommentCounts(parsed);
+                }
             } catch (err) {
                 console.error("Failed to load photos", err);
             } finally {
@@ -47,6 +58,24 @@ export const PhotosPage = () => {
         };
         loadPhotos();
     }, []);
+
+    useEffect(() => {
+        const photoIdRaw = searchParams.get('photoId');
+        const mode = searchParams.get('mode');
+        if (!photoIdRaw || mode !== 'comments' || photos.length === 0) {
+            return;
+        }
+        const photoId = Number(photoIdRaw);
+        if (!Number.isFinite(photoId)) {
+            return;
+        }
+        const target = photos.find(photo => photo.id === photoId);
+        if (!target) {
+            return;
+        }
+        openCommentModal(target);
+        setSearchParams({}, { replace: true });
+    }, [photos, searchParams]);
 
     const handlePhotoClick = (index: number, photoId: number) => {
         if (isSelectionMode) {
@@ -154,6 +183,7 @@ export const PhotosPage = () => {
         try {
             const created = await api.createComment('photo', commentPhoto.id, commentBody.trim());
             setComments(prev => [...prev, created]);
+            setCommentCounts(prev => ({ ...prev, [commentPhoto.id]: (prev[commentPhoto.id] || 0) + 1 }));
             setCommentBody('');
             showSnackbar('Comment posted');
         } catch (err: any) {
@@ -165,6 +195,9 @@ export const PhotosPage = () => {
         try {
             await api.deleteComment(commentId);
             setComments(prev => prev.filter(c => c.id !== commentId));
+            if (commentPhoto) {
+                setCommentCounts(prev => ({ ...prev, [commentPhoto.id]: Math.max(0, (prev[commentPhoto.id] || 1) - 1) }));
+            }
         } catch (err: any) {
             showSnackbar(`Failed to delete comment: ${err.message}`);
         }
@@ -409,6 +442,9 @@ export const PhotosPage = () => {
                                                     }}
                                                 >
                                                     <MdChatBubbleOutline />
+                                                    {(commentCounts[photo.id] || 0) > 0 && (
+                                                        <span className={styles.commentCount}>{commentCounts[photo.id]}</span>
+                                                    )}
                                                 </button>
                                             )}
                                             {isSelectionMode && (

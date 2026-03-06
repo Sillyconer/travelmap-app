@@ -19,6 +19,18 @@ async def list_comments(
     return await store.list_comments(current_user.id, entity_type, entity_id, limit=limit)
 
 
+@router.get("/counts", response_model=dict)
+async def get_comment_counts(
+    entity_type: str,
+    entity_ids: str,
+    current_user: UserOut = Depends(get_current_user),
+):
+    store = get_store()
+    ids = [int(raw.strip()) for raw in entity_ids.split(",") if raw.strip()]
+    counts = await store.get_comment_counts(current_user.id, entity_type, ids)
+    return {str(k): v for k, v in counts.items()}
+
+
 @router.post("", response_model=CommentOut, status_code=201)
 async def create_comment(
     data: CommentCreate,
