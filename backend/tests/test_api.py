@@ -660,3 +660,60 @@ async def test_editor_cannot_update_trip_settings():
             json={"name": "Edited By Member"},
         )
         assert update_attempt.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_itinerary_items_crud_and_viewer_restriction():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as owner_client, AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as viewer_client:
+        owner_register = await owner_client.post(
+            "/api/auth/register",
+            json={"username": "itowner", "displayName": "It Owner", "password": "secret"},
+        )
+        viewer_register = await viewer_client.post(
+            "/api/auth/register",
+            json={"username": "itviewer", "displayName": "It Viewer", "password": "secret"},
+        )
+        assert owner_register.status_code == 201
+        assert viewer_register.status_code == 201
+
+        owner_client.headers.update({"Authorization": f"Bearer {owner_register.json()['token']}"})
+        viewer_client.headers.update({"Authorization": f"Bearer {viewer_register.json()['token']}"})
+
+        req = await viewer_client.post("/api/social/friend-requests", json={"username": "itowner"})
+        assert req.status_code == 201
+        accepted = await owner_client.post(f"/api/social/friend-requests/{req.json()['id']}/accept")
+        assert accepted.status_code == 200
+
+        trip = await owner_client.post(
+            "/api/trips",
+            json={"name": "Itinerary Trip", "color": "#449966", "visibility": "friends_only"},
+        )
+        assert trip.status_code == 201
+        trip_id = trip.json()["id"]
+
+        invited = await owner_client.post(
+            f"/api/trips/{trip_id}/members/{viewer_register.json()['user']['id']}?role=viewer"
+        )
+        assert invited.status_code == 200
+
+        created = await owner_client.post(
+            f"/api/trips/{trip_id}/itinerary",
+            json={"title": "Morning walk", "dayIndex": 1, "startAt": "08:30", "endAt": "10:00", "note": "Bring water"},
+        )
+        assert created.status_code == 201
+        item_id = created.json()["id"]
+
+        listed = await viewer_client.get(f"/api/trips/{trip_id}/itinerary")
+        assert listed.status_code == 200
+        assert len(listed.json()) == 1
+
+        forbidden = await viewer_client.post(
+            f"/api/trips/{trip_id}/itinerary",
+            json={"title": "Viewer edit", "dayIndex": 1},
+        )
+        assert forbidden.status_code == 403
+
+        removed = await owner_client.delete(f"/api/trips/{trip_id}/itinerary/{item_id}")
+        assert removed.status_code == 200

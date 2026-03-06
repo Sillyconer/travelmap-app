@@ -198,6 +198,19 @@ export interface Place {
     note: string;
 }
 
+export interface ItineraryItem {
+    id: number;
+    tripId: number;
+    title: string;
+    dayIndex: number;
+    startAt: string;
+    endAt: string;
+    placeId?: number;
+    note: string;
+    sortOrder: number;
+    createdAt: string;
+}
+
 export interface PhotoOut {
     id: number;
     name: string;
@@ -307,6 +320,8 @@ export interface ExpenseSettlement {
 
 export type PlaceCreate = Pick<Place, 'name' | 'lat' | 'lng' | 'note'>;
 export type PlaceUpdate = Partial<Omit<Place, 'id'>>;
+export type ItineraryItemCreate = Pick<ItineraryItem, 'title' | 'dayIndex' | 'startAt' | 'endAt' | 'placeId' | 'note'>;
+export type ItineraryItemUpdate = Partial<ItineraryItemCreate>;
 
 export type PersonCreate = Pick<Person, 'name' | 'color'>;
 export type PersonUpdate = Partial<Omit<Person, 'id'>>;

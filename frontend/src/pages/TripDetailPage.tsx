@@ -5,7 +5,7 @@ import { Card } from '../components/ui/Card';
 import { useState, useEffect, useMemo } from 'react';
 import * as api from '../api/client';
 import { showSnackbar } from '../components/ui/Snackbar';
-import type { Trip, PlaceCreate, Place } from '../types/models';
+import type { Trip, PlaceCreate, Place, ItineraryItem } from '../types/models';
 import styles from './TripDetailPage.module.css';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
@@ -76,6 +76,13 @@ export const TripDetailPage = () => {
     const [selectedInviteRole, setSelectedInviteRole] = useState<'viewer' | 'editor'>('viewer');
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [newCommentBody, setNewCommentBody] = useState('');
+    const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([]);
+    const [planTitle, setPlanTitle] = useState('');
+    const [planDayIndex, setPlanDayIndex] = useState('1');
+    const [planStartAt, setPlanStartAt] = useState('');
+    const [planEndAt, setPlanEndAt] = useState('');
+    const [planPlaceId, setPlanPlaceId] = useState<number | null>(null);
+    const [planNote, setPlanNote] = useState('');
 
     // DnD Sensors
     const sensors = useSensors(
@@ -119,6 +126,9 @@ export const TripDetailPage = () => {
                 ]);
                 setFriends(friendsData);
                 setMembers(membersData);
+
+                const loadedPlan = await api.getItineraryItems(tripId).catch(() => []);
+                setItineraryItems(loadedPlan);
             } catch (err) {
                 showSnackbar('Failed to load trip details');
                 navigate('/trips');
@@ -348,6 +358,55 @@ export const TripDetailPage = () => {
         }
     };
 
+    const handleAddPlanItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!trip || !planTitle.trim()) {
+            return;
+        }
+        if (!canEdit) {
+            showSnackbar('Viewer access cannot edit itinerary plan items');
+            return;
+        }
+        try {
+            const created = await api.createItineraryItem(trip.id, {
+                title: planTitle.trim(),
+                dayIndex: Math.max(1, Number(planDayIndex || 1)),
+                startAt: planStartAt.trim(),
+                endAt: planEndAt.trim(),
+                placeId: planPlaceId ?? undefined,
+                note: planNote.trim(),
+            });
+            setItineraryItems(prev => {
+                const next = [...prev, created];
+                return next.sort((a, b) => (a.dayIndex - b.dayIndex) || (a.sortOrder - b.sortOrder) || (a.id - b.id));
+            });
+            setPlanTitle('');
+            setPlanDayIndex('1');
+            setPlanStartAt('');
+            setPlanEndAt('');
+            setPlanPlaceId(null);
+            setPlanNote('');
+        } catch (err: any) {
+            showSnackbar(`Failed to add plan item: ${err.message}`);
+        }
+    };
+
+    const handleDeletePlanItem = async (itemId: number) => {
+        if (!trip) {
+            return;
+        }
+        if (!canEdit) {
+            showSnackbar('Viewer access cannot remove itinerary plan items');
+            return;
+        }
+        try {
+            await api.deleteItineraryItem(trip.id, itemId);
+            setItineraryItems(prev => prev.filter(item => item.id !== itemId));
+        } catch (err: any) {
+            showSnackbar(`Failed to delete plan item: ${err.message}`);
+        }
+    };
+
     if (isLoading && !trip) {
         return <div className={styles.loading}>Loading trip data...</div>;
     }
@@ -570,6 +629,83 @@ export const TripDetailPage = () => {
                                                 Remove
                                             </Button>
                                         </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card className={styles.metaCard}>
+                        <h3>Day Plan</h3>
+                        <form onSubmit={handleAddPlanItem} className={styles.form}>
+                            <Input
+                                label="Title"
+                                value={planTitle}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanTitle(e.target.value)}
+                                placeholder="e.g. Sunrise walk"
+                                fullWidth
+                            />
+                            <div className={styles.coordRow}>
+                                <Input
+                                    label="Day"
+                                    type="number"
+                                    min="1"
+                                    value={planDayIndex}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanDayIndex(e.target.value)}
+                                    fullWidth
+                                />
+                                <Input
+                                    label="Start"
+                                    value={planStartAt}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanStartAt(e.target.value)}
+                                    placeholder="09:00"
+                                    fullWidth
+                                />
+                                <Input
+                                    label="End"
+                                    value={planEndAt}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanEndAt(e.target.value)}
+                                    placeholder="11:00"
+                                    fullWidth
+                                />
+                            </div>
+                            <div className={styles.coordRow}>
+                                <select
+                                    value={planPlaceId ?? ''}
+                                    onChange={e => setPlanPlaceId(e.target.value ? Number(e.target.value) : null)}
+                                    className={styles.select}
+                                >
+                                    <option value="">No linked place</option>
+                                    {trip.places.map(place => (
+                                        <option key={`plan-place-${place.id}`} value={place.id}>{place.name}</option>
+                                    ))}
+                                </select>
+                                <Input
+                                    label="Note"
+                                    value={planNote}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanNote(e.target.value)}
+                                    placeholder="Optional"
+                                    fullWidth
+                                />
+                            </div>
+                            {canEdit && <Button size="sm" type="submit" disabled={!planTitle.trim()}>Add Plan Item</Button>}
+                        </form>
+                        <div className={styles.expenseList}>
+                            {itineraryItems.length === 0 && <p className={styles.helperText}>No plan items yet.</p>}
+                            {itineraryItems.map(item => (
+                                <div key={`plan-${item.id}`} className={styles.planRow}>
+                                    <div>
+                                        <strong>Day {item.dayIndex} · {item.title}</strong>
+                                        <p className={styles.helperText}>
+                                            {item.startAt || '--'} - {item.endAt || '--'}
+                                            {item.placeId ? ` · linked place #${item.placeId}` : ''}
+                                            {item.note ? ` · ${item.note}` : ''}
+                                        </p>
+                                    </div>
+                                    {canEdit && (
+                                        <Button size="sm" variant="text" onClick={() => handleDeletePlanItem(item.id)}>
+                                            Remove
+                                        </Button>
                                     )}
                                 </div>
                             ))}

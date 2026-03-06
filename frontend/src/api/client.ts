@@ -6,6 +6,9 @@ import type {
     ExpenseSettlement,
     Friend,
     FriendRequest,
+    ItineraryItem,
+    ItineraryItemCreate,
+    ItineraryItemUpdate,
     NotificationItem,
     Person,
     PersonCreate,
@@ -125,6 +128,15 @@ export const createPlace = (tripId: number, data: PlaceCreate) => fetcher<Place>
 export const updatePlace = (tripId: number, placeId: number, data: PlaceUpdate) => fetcher<Place>(`/trips/${tripId}/places/${placeId}/update`, { method: 'POST', body: JSON.stringify(data) });
 export const deletePlace = (tripId: number, placeId: number) => fetcher<{}>(`/trips/${tripId}/places/${placeId}`, { method: 'DELETE' });
 export const reorderPlaces = (tripId: number, orderedIds: number[]) => fetcher<Trip>(`/trips/${tripId}/places/reorder`, { method: 'POST', body: JSON.stringify({ order: orderedIds.join(',') }) });
+
+// ── Itinerary ──
+export const getItineraryItems = (tripId: number) => fetcher<ItineraryItem[]>(`/trips/${tripId}/itinerary`);
+export const createItineraryItem = (tripId: number, data: ItineraryItemCreate) =>
+    fetcher<ItineraryItem>(`/trips/${tripId}/itinerary`, { method: 'POST', body: JSON.stringify(data) });
+export const updateItineraryItem = (tripId: number, itemId: number, data: ItineraryItemUpdate) =>
+    fetcher<ItineraryItem>(`/trips/${tripId}/itinerary/${itemId}/update`, { method: 'POST', body: JSON.stringify(data) });
+export const deleteItineraryItem = (tripId: number, itemId: number) =>
+    fetcher<{ ok: boolean }>(`/trips/${tripId}/itinerary/${itemId}`, { method: 'DELETE' });
 
 // ── Photos ──
 // Note: upload endpoint uses FormData and is usually handled directly by the upload component

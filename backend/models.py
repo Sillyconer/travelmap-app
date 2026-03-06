@@ -390,6 +390,43 @@ class ExpenseCreate(BaseModel):
     currency: str
     note: str = ""
 
+
+class ItineraryItemCreate(BaseModel):
+    title: str
+    day_index: int = Field(1, alias="dayIndex")
+    start_at: str = Field("", alias="startAt")
+    end_at: str = Field("", alias="endAt")
+    place_id: int | None = Field(None, alias="placeId")
+    note: str = ""
+
+    model_config = {"populate_by_name": True}
+
+
+class ItineraryItemUpdate(BaseModel):
+    title: str | None = None
+    day_index: int | None = Field(None, alias="dayIndex")
+    start_at: str | None = Field(None, alias="startAt")
+    end_at: str | None = Field(None, alias="endAt")
+    place_id: int | None = Field(None, alias="placeId")
+    note: str | None = None
+
+    model_config = {"populate_by_name": True}
+
+
+class ItineraryItemOut(BaseModel):
+    id: int
+    trip_id: int = Field(alias="tripId")
+    title: str
+    day_index: int = Field(alias="dayIndex")
+    start_at: str = Field(alias="startAt")
+    end_at: str = Field(alias="endAt")
+    place_id: int | None = Field(None, alias="placeId")
+    note: str = ""
+    sort_order: int = Field(alias="sortOrder")
+    created_at: str = Field(alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
     model_config = {"populate_by_name": True}
 
 

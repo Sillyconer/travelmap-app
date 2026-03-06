@@ -15,6 +15,7 @@ from pathlib import Path
 from config import DB_PATH
 from models import (
     Trip, TripCreate, TripUpdate,
+    ItineraryItemCreate, ItineraryItemOut, ItineraryItemUpdate,
     Place, PlaceCreate, PlaceUpdate,
     PhotoOut,
     Person, PersonCreate, PersonUpdate,
@@ -55,6 +56,23 @@ CREATE TABLE IF NOT EXISTS places (
     note     TEXT    NOT NULL DEFAULT '',
     sort_order INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS itinerary_items (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    trip_id    INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    title      TEXT    NOT NULL,
+    day_index  INTEGER NOT NULL DEFAULT 1,
+    start_at   TEXT    NOT NULL DEFAULT '',
+    end_at     TEXT    NOT NULL DEFAULT '',
+    place_id   INTEGER REFERENCES places(id) ON DELETE SET NULL,
+    note       TEXT    NOT NULL DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_itinerary_trip_day_sort
+    ON itinerary_items(trip_id, day_index, sort_order, id);
 
 CREATE TABLE IF NOT EXISTS photos (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -742,6 +760,126 @@ class Store:
             )
         await self.db.commit()
         return await self.get_trip(trip_id, user_id)
+
+    # ── Itinerary ─────────────────────────────────────────────────────────
+
+    async def list_itinerary_items(self, trip_id: int, user_id: int) -> list[ItineraryItemOut]:
+        if not await self.user_can_access_trip(user_id, trip_id):
+            return []
+        rows = await self.db.execute_fetchall(
+            """
+            SELECT id, trip_id, title, day_index, start_at, end_at, place_id, note, sort_order, created_at
+            FROM itinerary_items
+            WHERE trip_id = ?
+            ORDER BY day_index ASC, sort_order ASC, id ASC
+            """,
+            (trip_id,),
+        )
+        return [
+            ItineraryItemOut(
+                id=row["id"],
+                tripId=row["trip_id"],
+                title=row["title"],
+                dayIndex=row["day_index"],
+                startAt=row["start_at"] or "",
+                endAt=row["end_at"] or "",
+                placeId=row["place_id"],
+                note=row["note"] or "",
+                sortOrder=row["sort_order"],
+                createdAt=row["created_at"],
+            )
+            for row in rows
+        ]
+
+    async def create_itinerary_item(self, trip_id: int, user_id: int, data: ItineraryItemCreate) -> ItineraryItemOut | None:
+        if not await self.user_can_edit_trip(user_id, trip_id):
+            return None
+        day_index = max(1, int(data.day_index or 1))
+        async with self.db.execute(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM itinerary_items WHERE trip_id = ? AND day_index = ?",
+            (trip_id, day_index),
+        ) as cursor:
+            row = await cursor.fetchone()
+        next_order = int(row["next_order"] if row else 0)
+
+        cursor = await self.db.execute(
+            """
+            INSERT INTO itinerary_items (trip_id, title, day_index, start_at, end_at, place_id, note, sort_order, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                trip_id,
+                data.title.strip(),
+                day_index,
+                data.start_at.strip(),
+                data.end_at.strip(),
+                data.place_id,
+                data.note.strip(),
+                next_order,
+                user_id,
+            ),
+        )
+        await self.db.commit()
+
+        async with self.db.execute(
+            """
+            SELECT id, trip_id, title, day_index, start_at, end_at, place_id, note, sort_order, created_at
+            FROM itinerary_items
+            WHERE id = ?
+            """,
+            (int(cursor.lastrowid or 0),),
+        ) as fetch:
+            created = await fetch.fetchone()
+        if not created:
+            return None
+        return ItineraryItemOut(
+            id=created["id"],
+            tripId=created["trip_id"],
+            title=created["title"],
+            dayIndex=created["day_index"],
+            startAt=created["start_at"] or "",
+            endAt=created["end_at"] or "",
+            placeId=created["place_id"],
+            note=created["note"] or "",
+            sortOrder=created["sort_order"],
+            createdAt=created["created_at"],
+        )
+
+    async def delete_itinerary_item(self, trip_id: int, item_id: int, user_id: int) -> bool:
+        if not await self.user_can_edit_trip(user_id, trip_id):
+            return False
+        cursor = await self.db.execute(
+            "DELETE FROM itinerary_items WHERE id = ? AND trip_id = ?",
+            (item_id, trip_id),
+        )
+        await self.db.commit()
+        return (cursor.rowcount or 0) > 0
+
+    async def update_itinerary_item(self, trip_id: int, item_id: int, user_id: int, data: ItineraryItemUpdate) -> ItineraryItemOut | None:
+        if not await self.user_can_edit_trip(user_id, trip_id):
+            return None
+        fields = data.model_dump(exclude_none=True)
+        if "day_index" in fields:
+            fields["day_index"] = max(1, int(fields["day_index"]))
+        if not fields:
+            items = await self.list_itinerary_items(trip_id, user_id)
+            for item in items:
+                if item.id == item_id:
+                    return item
+            return None
+
+        sets = [f"{key} = ?" for key in fields.keys()]
+        values = list(fields.values()) + [item_id, trip_id]
+        await self.db.execute(
+            f"UPDATE itinerary_items SET {', '.join(sets)} WHERE id = ? AND trip_id = ?",
+            values,
+        )
+        await self.db.commit()
+        items = await self.list_itinerary_items(trip_id, user_id)
+        for item in items:
+            if item.id == item_id:
+                return item
+        return None
 
     # ── Photos ────────────────────────────────────────────────────────────
 

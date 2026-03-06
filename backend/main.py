@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from config import HOST, PORT, PHOTOS_DIR, THUMBS_DIR
 from store import Store
 from dependencies import set_store
-from routers import auth, comments, finance, notifications, profiles, search, trips, places, photos, persons, sharing, social
+from routers import auth, comments, finance, itinerary, notifications, profiles, search, trips, places, photos, persons, sharing, social
 
 
 # ── Lifespan (startup / shutdown) ────────────────────────────────────────────
@@ -68,6 +68,7 @@ app.include_router(profiles.router)
 app.include_router(notifications.router)
 app.include_router(search.router)
 app.include_router(comments.router)
+app.include_router(itinerary.router)
 
 # ── Static files ──────────────────────────────────────────────────────────────
 
