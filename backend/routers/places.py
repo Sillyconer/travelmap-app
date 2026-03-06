@@ -22,6 +22,8 @@ async def create_place(trip_id: int, data: PlaceCreate, current_user: UserOut = 
     trip = await store.get_trip(trip_id, current_user.id)
     if not trip:
         raise HTTPException(404, f"Trip {trip_id} not found")
+    if not await store.user_can_edit_trip(current_user.id, trip_id):
+        raise HTTPException(403, "You only have viewer access to this trip")
     return await store.create_place(trip_id, data)
 
 
@@ -32,6 +34,8 @@ async def update_place(trip_id: int, place_id: int, data: PlaceUpdate, current_u
     trip = await store.get_trip(trip_id, current_user.id)
     if not trip:
         raise HTTPException(404, f"Trip {trip_id} not found")
+    if not await store.user_can_edit_trip(current_user.id, trip_id):
+        raise HTTPException(403, "You only have viewer access to this trip")
     place = await store.update_place(trip_id, place_id, data)
     if not place:
         raise HTTPException(404, f"Place {place_id} not found in trip {trip_id}")
@@ -45,6 +49,8 @@ async def delete_place(trip_id: int, place_id: int, current_user: UserOut = Depe
     trip = await store.get_trip(trip_id, current_user.id)
     if not trip:
         raise HTTPException(404, f"Trip {trip_id} not found")
+    if not await store.user_can_edit_trip(current_user.id, trip_id):
+        raise HTTPException(403, "You only have viewer access to this trip")
     if not await store.delete_place(trip_id, place_id):
         raise HTTPException(404, f"Place {place_id} not found in trip {trip_id}")
     return {}
@@ -57,6 +63,8 @@ async def reorder_places(trip_id: int, payload: PlaceReorder, current_user: User
     Accepts a comma-separated list of place IDs in the desired order.
     """
     store = get_store()
+    if not await store.user_can_edit_trip(current_user.id, trip_id):
+        raise HTTPException(403, "You only have viewer access to this trip")
     ordered_ids = [int(x.strip()) for x in payload.order.split(",") if x.strip()]
     trip = await store.reorder_places(trip_id, current_user.id, ordered_ids)
     if not trip:

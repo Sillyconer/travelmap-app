@@ -45,6 +45,8 @@ async def create_expense(trip_id: int, data: ExpenseRequest, current_user: UserO
     store = get_store()
     if not await store.user_can_access_trip(current_user.id, trip_id):
         raise HTTPException(status_code=404, detail="Trip not found")
+    if not await store.user_can_edit_trip(current_user.id, trip_id):
+        raise HTTPException(status_code=403, detail="You only have viewer access to this trip")
 
     home_currency = current_user.home_currency or "USD"
     try:

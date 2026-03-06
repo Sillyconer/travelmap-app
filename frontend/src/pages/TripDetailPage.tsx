@@ -17,7 +17,7 @@ import { Lightbox } from '../components/gallery/Lightbox';
 import { MdDownload } from 'react-icons/md';
 import { Share2 } from 'lucide-react';
 import type { CurrencyOption, Expense } from '../types/models';
-import type { Friend } from '../types/models';
+import type { Friend, TripMember } from '../types/models';
 import { motion } from 'framer-motion';
 import {
     DndContext,
@@ -66,8 +66,9 @@ export const TripDetailPage = () => {
     const [expenseNote, setExpenseNote] = useState('');
     const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
     const [friends, setFriends] = useState<Friend[]>([]);
-    const [members, setMembers] = useState<Friend[]>([]);
+    const [members, setMembers] = useState<TripMember[]>([]);
     const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
+    const [selectedInviteRole, setSelectedInviteRole] = useState<'viewer' | 'editor'>('viewer');
 
     // DnD Sensors
     const sensors = useSensors(
@@ -119,6 +120,10 @@ export const TripDetailPage = () => {
     const handleAddPlace = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!trip || !placeName.trim() || !placeLat || !placeLng) return;
+        if (trip.accessRole === 'viewer') {
+            showSnackbar('Viewer access cannot add places');
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -152,6 +157,10 @@ export const TripDetailPage = () => {
 
     const handleDeletePlace = async (placeId: number) => {
         if (!trip) return;
+        if (trip.accessRole === 'viewer') {
+            showSnackbar('Viewer access cannot delete places');
+            return;
+        }
         try {
             await api.deletePlace(trip.id, placeId);
             const updatedTrip = {
@@ -170,6 +179,10 @@ export const TripDetailPage = () => {
         const { active, over } = event;
 
         if (!trip || !over || active.id === over.id) {
+            return;
+        }
+        if (trip.accessRole === 'viewer') {
+            showSnackbar('Viewer access cannot reorder places');
             return;
         }
 
@@ -200,6 +213,10 @@ export const TripDetailPage = () => {
 
     const handleUploadStaged = async (photosToUpload: StagedPhoto[]) => {
         if (!trip) return;
+        if (trip.accessRole === 'viewer') {
+            showSnackbar('Viewer access cannot upload photos');
+            return;
+        }
 
         let successCount = 0;
 
@@ -234,20 +251,30 @@ export const TripDetailPage = () => {
         }
     };
 
-    const handleDownloadAllPhotos = () => {
+    const handleDownloadAllPhotos = async () => {
         if (!trip || trip.photos.length === 0) return;
-        const url = `http://localhost:8000/api/trips/${trip.id}/photos/download`;
-        const a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        try {
+            const blob = await api.downloadTripPhotosZip(trip.id);
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objectUrl;
+            a.download = `${trip.name.replace(/\s+/g, '_')}_photos.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(objectUrl);
+        } catch (err: any) {
+            showSnackbar(`Download failed: ${err.message || 'Unknown error'}`);
+        }
     };
 
     const handleAddExpense = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!trip || !expenseAmount) return;
+        if (trip.accessRole === 'viewer') {
+            showSnackbar('Viewer access cannot add expenses');
+            return;
+        }
         try {
             const created = await api.createExpense(trip.id, {
                 amount: parseFloat(expenseAmount),
@@ -281,13 +308,14 @@ export const TripDetailPage = () => {
     };
 
     const isOwner = user?.id === trip.ownerUserId;
+    const canEdit = trip.accessRole !== 'viewer';
     const invitedFriendIds = new Set(members.map(m => m.id));
     const invitables = friends.filter(f => !invitedFriendIds.has(f.id));
 
     const handleInviteFriend = async () => {
         if (!selectedFriendId) return;
         try {
-            await api.inviteTripMember(trip.id, selectedFriendId);
+            await api.inviteTripMember(trip.id, selectedFriendId, selectedInviteRole);
             const nextMembers = await api.getTripMembers(trip.id);
             setMembers(nextMembers);
             setSelectedFriendId(null);
@@ -307,6 +335,16 @@ export const TripDetailPage = () => {
         }
     };
 
+    const handleUpdateMemberRole = async (memberUserId: number, role: 'viewer' | 'editor') => {
+        try {
+            await api.setTripMemberRole(trip.id, memberUserId, role);
+            setMembers(prev => prev.map(m => (m.id === memberUserId ? { ...m, role } : m)));
+            showSnackbar('Member role updated');
+        } catch (err: any) {
+            showSnackbar(err.message || 'Failed to update role');
+        }
+    };
+
     return (
         <div className={styles.container}>
             <motion.header layoutId={`trip-card-${trip.id}`} className={styles.header}>
@@ -323,7 +361,7 @@ export const TripDetailPage = () => {
                     <Button variant="outlined" onClick={handleShareAlbum}>
                         <Share2 size={16} style={{ marginRight: 6 }} /> Share Album
                     </Button>
-                    <Button onClick={() => setIsAddPlaceOpen(true)}>+ Add Place</Button>
+                    {canEdit && <Button onClick={() => setIsAddPlaceOpen(true)}>+ Add Place</Button>}
                 </div>
             </motion.header>
 
@@ -334,7 +372,7 @@ export const TripDetailPage = () => {
                     <div className={styles.sectionHeader}>
                         <h2>Itinerary ({trip.places.length})</h2>
                         {/* Reordering functionality will be added in Phase 3 with @dnd-kit */}
-                        {trip.places.length > 1 && <Button variant="text" size="sm">Reorder</Button>}
+                        {canEdit && trip.places.length > 1 && <Button variant="text" size="sm">Reorder</Button>}
                     </div>
 
                     <div className={styles.placesList}>
@@ -360,6 +398,7 @@ export const TripDetailPage = () => {
                                             total={trip.places.length}
                                             tripColor={trip.color}
                                             onDelete={handleDeletePlace}
+                                            canEdit={canEdit}
                                         />
                                     ))}
                                 </SortableContext>
@@ -397,6 +436,14 @@ export const TripDetailPage = () => {
                                         <option key={friend.id} value={friend.id}>{friend.displayName} (@{friend.username})</option>
                                     ))}
                                 </select>
+                                <select
+                                    value={selectedInviteRole}
+                                    onChange={e => setSelectedInviteRole(e.target.value as 'viewer' | 'editor')}
+                                    className={styles.select}
+                                >
+                                    <option value="viewer">Viewer</option>
+                                    <option value="editor">Editor</option>
+                                </select>
                                 <Button size="sm" onClick={handleInviteFriend} disabled={!selectedFriendId}>Invite</Button>
                             </div>
                         )}
@@ -404,11 +451,21 @@ export const TripDetailPage = () => {
                             {members.length === 0 && <p className={styles.helperText}>No invited members yet.</p>}
                             {members.map(member => (
                                 <div className={styles.memberRow} key={member.id}>
-                                    <span>{member.displayName} (@{member.username})</span>
+                                    <span>{member.displayName} (@{member.username}) · {member.role}</span>
                                     {isOwner && (
-                                        <Button size="sm" variant="text" onClick={() => handleRemoveMember(member.id)}>
-                                            Remove
-                                        </Button>
+                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                            <select
+                                                value={member.role}
+                                                onChange={e => handleUpdateMemberRole(member.id, e.target.value as 'viewer' | 'editor')}
+                                                className={styles.select}
+                                            >
+                                                <option value="viewer">Viewer</option>
+                                                <option value="editor">Editor</option>
+                                            </select>
+                                            <Button size="sm" variant="text" onClick={() => handleRemoveMember(member.id)}>
+                                                Remove
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             ))}
@@ -445,7 +502,7 @@ export const TripDetailPage = () => {
                                     fullWidth
                                 />
                             </div>
-                            <Button size="sm" type="submit">Add Expense</Button>
+                            {canEdit && <Button size="sm" type="submit">Add Expense</Button>}
                         </form>
                         <div className={styles.expenseList}>
                             {expenses.slice(0, 5).map(exp => (
@@ -475,24 +532,26 @@ export const TripDetailPage = () => {
                     )}
 
                     {/* Photos Upload Section */}
-                    <Card className={styles.metaCard}>
-                        <div className={styles.sectionHeader}>
-                            <h2>Upload Photos</h2>
-                        </div>
-                        <UploadZone onFilesAdded={handleFilesAdded} />
-                        {stagedFiles.length > 0 && (
-                            <StagingTable
-                                files={stagedFiles}
-                                places={trip.places}
-                                onUpload={handleUploadStaged}
-                                onRemove={() => {
-                                    // Complex filter by identity because StagingTable manages the ID
-                                    // We'll just reset files in real app, but here we can let StagingTable own it
-                                    // and just clear files entirely when empty
-                                }}
-                            />
-                        )}
-                    </Card>
+                    {canEdit && (
+                        <Card className={styles.metaCard}>
+                            <div className={styles.sectionHeader}>
+                                <h2>Upload Photos</h2>
+                            </div>
+                            <UploadZone onFilesAdded={handleFilesAdded} />
+                            {stagedFiles.length > 0 && (
+                                <StagingTable
+                                    files={stagedFiles}
+                                    places={trip.places}
+                                    onUpload={handleUploadStaged}
+                                    onRemove={() => {
+                                        // Complex filter by identity because StagingTable manages the ID
+                                        // We'll just reset files in real app, but here we can let StagingTable own it
+                                        // and just clear files entirely when empty
+                                    }}
+                                />
+                            )}
+                        </Card>
+                    )}
                 </section>
 
             </div>

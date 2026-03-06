@@ -71,6 +71,10 @@ class FriendRequestCreate(BaseModel):
     username: str
 
 
+class TripMemberRoleUpdate(BaseModel):
+    role: str
+
+
 class NotificationOut(BaseModel):
     id: int
     type: str
@@ -204,6 +208,10 @@ class FriendOut(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class TripMemberOut(FriendOut):
+    role: str = "viewer"
+
+
 class FriendRequestOut(BaseModel):
     id: int
     from_user_id: int = Field(alias="fromUserId")
@@ -305,6 +313,7 @@ class Trip(BaseModel):
     visibility: str = "friends_only"
     owner_user_id: int = Field(alias="ownerUserId")
     is_shared: bool = Field(False, alias="isShared")
+    access_role: str = Field("owner", alias="accessRole")
     places: list[Place] = []
     photos: list[PhotoOut] = []
     person_ids: list[int] = Field(default_factory=list, alias="personIds")

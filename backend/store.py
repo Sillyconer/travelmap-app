@@ -19,6 +19,7 @@ from models import (
     Person, PersonCreate, PersonUpdate,
     UserOut, FriendOut, FriendRequestOut, ExpenseOut, UserUpdate,
     NotificationOut,
+    TripMemberOut,
     ProfileFriendOut, ProfileMapPointOut, ProfileOut, ProfilePhotoOut, ProfileSearchResult, ProfileTripOut, ProfileUpdate,
     ShareLinkOut,
 )
@@ -195,6 +196,8 @@ VALID_PROFILE_THEMES = {
     "atlas-sand",
     "pine-trail",
 }
+
+VALID_TRIP_MEMBER_ROLES = {"viewer", "editor"}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -463,8 +466,7 @@ class Store:
 
     async def set_trip_persons(self, trip_id: int, user_id: int, person_ids: list[int]) -> Trip | None:
         """Replace all person assignments for a trip."""
-        trip = await self.get_trip(trip_id, user_id)
-        if not trip:
+        if not await self.user_is_trip_owner(user_id, trip_id):
             return None
         await self.db.execute(
             "DELETE FROM trip_persons WHERE trip_id = ?", (trip_id,)
@@ -480,6 +482,7 @@ class Store:
     async def _build_trip(self, row: dict, user_id: int) -> Trip:
         """Assemble a full Trip object from a DB row."""
         trip_id = row["id"]
+        access_role = await self.user_trip_access_role(user_id, trip_id)
         places = await self._get_places(trip_id)
         photos = await self._get_photos(trip_id, user_id)
         person_ids = await self._get_trip_person_ids(trip_id, viewer_user_id=user_id, owner_user_id=row["user_id"])
@@ -496,6 +499,7 @@ class Store:
             visibility=row.get("visibility", "friends_only"),
             ownerUserId=row["user_id"],
             isShared=bool(row.get("is_shared", row["user_id"] != user_id)),
+            accessRole=access_role,
             places=places,
             photos=photos,
             personIds=person_ids,
@@ -509,8 +513,26 @@ class Store:
         async with self.db.execute("SELECT 1 FROM trip_members WHERE trip_id = ? AND user_id = ?", (trip_id, user_id)) as cursor:
             return await cursor.fetchone() is not None
 
+    async def user_trip_access_role(self, user_id: int, trip_id: int) -> str:
+        if await self.user_is_trip_owner(user_id, trip_id):
+            return "owner"
+        async with self.db.execute("SELECT role FROM trip_members WHERE trip_id = ? AND user_id = ?", (trip_id, user_id)) as cursor:
+            row = await cursor.fetchone()
+        if not row:
+            return "none"
+        role = (row["role"] or "viewer").strip().lower()
+        if role == "member":
+            return "editor"
+        if role not in VALID_TRIP_MEMBER_ROLES:
+            return "viewer"
+        return role
+
+    async def user_can_edit_trip(self, user_id: int, trip_id: int) -> bool:
+        role = await self.user_trip_access_role(user_id, trip_id)
+        return role in {"owner", "editor"}
+
     async def user_can_access_trip(self, user_id: int, trip_id: int) -> bool:
-        return await self.user_is_trip_owner(user_id, trip_id) or await self.user_is_trip_member(user_id, trip_id)
+        return (await self.user_trip_access_role(user_id, trip_id)) != "none"
 
     async def _get_trip_person_ids(self, trip_id: int, viewer_user_id: int, owner_user_id: int) -> list[int]:
         """
@@ -1687,10 +1709,15 @@ class Store:
 
     # ── Trip Members ──────────────────────────────────────────────────────
 
-    async def invite_friend_to_trip(self, owner_user_id: int, trip_id: int, friend_user_id: int) -> bool:
+    async def invite_friend_to_trip(self, owner_user_id: int, trip_id: int, friend_user_id: int, role: str = "viewer") -> bool:
         if not await self.user_is_trip_owner(owner_user_id, trip_id):
             return False
         if not await self.are_friends(owner_user_id, friend_user_id):
+            return False
+        clean_role = role.strip().lower()
+        if clean_role == "member":
+            clean_role = "editor"
+        if clean_role not in VALID_TRIP_MEMBER_ROLES:
             return False
         async with self.db.execute("SELECT name FROM trips WHERE id = ?", (trip_id,)) as cursor:
             trip_row = await cursor.fetchone()
@@ -1698,8 +1725,8 @@ class Store:
             return False
         owner = await self.get_user_by_id(owner_user_id)
         await self.db.execute(
-            "INSERT OR IGNORE INTO trip_members (trip_id, user_id, role) VALUES (?, ?, 'member')",
-            (trip_id, friend_user_id),
+            "INSERT OR REPLACE INTO trip_members (trip_id, user_id, role) VALUES (?, ?, ?)",
+            (trip_id, friend_user_id, clean_role),
         )
         if owner:
             await self.create_notification(
@@ -1713,6 +1740,23 @@ class Store:
         await self.db.commit()
         return True
 
+    async def set_trip_member_role(self, owner_user_id: int, trip_id: int, member_user_id: int, role: str) -> bool:
+        if not await self.user_is_trip_owner(owner_user_id, trip_id):
+            return False
+        if member_user_id == owner_user_id:
+            return False
+        clean_role = role.strip().lower()
+        if clean_role == "member":
+            clean_role = "editor"
+        if clean_role not in VALID_TRIP_MEMBER_ROLES:
+            return False
+        cursor = await self.db.execute(
+            "UPDATE trip_members SET role = ? WHERE trip_id = ? AND user_id = ?",
+            (clean_role, trip_id, member_user_id),
+        )
+        await self.db.commit()
+        return cursor.rowcount > 0
+
     async def remove_trip_member(self, owner_user_id: int, trip_id: int, member_user_id: int) -> bool:
         if not await self.user_is_trip_owner(owner_user_id, trip_id):
             return False
@@ -1723,10 +1767,10 @@ class Store:
         await self.db.commit()
         return cursor.rowcount > 0
 
-    async def list_trip_members(self, trip_id: int) -> list[FriendOut]:
+    async def list_trip_members(self, trip_id: int) -> list[TripMemberOut]:
         rows = await self.db.execute_fetchall(
             """
-            SELECT u.*
+            SELECT u.*, tm.role
             FROM trip_members tm
             JOIN users u ON u.id = tm.user_id
             WHERE tm.trip_id = ?
@@ -1735,13 +1779,14 @@ class Store:
             (trip_id,),
         )
         return [
-            FriendOut(
+            TripMemberOut(
                 id=r["id"],
                 username=r["username"],
                 displayName=r["display_name"],
                 personId=r["person_id"],
                 homeCountry=r["home_country"],
                 homeCurrency=r["home_currency"],
+                role=("editor" if (r["role"] or "viewer") == "member" else (r["role"] or "viewer")),
             )
             for r in rows
         ]

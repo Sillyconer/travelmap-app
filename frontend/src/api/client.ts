@@ -16,6 +16,7 @@ import type {
     PlaceCreate,
     PlaceUpdate,
     Trip,
+    TripMember,
     TripCreate,
     TripUpdate,
     User,
@@ -102,9 +103,12 @@ export const updateTrip = (id: number, data: TripUpdate) => fetcher<Trip>(`/trip
 export const deleteTrip = (id: number) => fetcher<{ ok: boolean }>(`/trips/${id}`, { method: 'DELETE' });
 export const setTripPersons = (tripId: number, personIds: number[]) =>
     fetcher<Trip>(`/trips/${tripId}/persons?person_ids=${encodeURIComponent(personIds.join(','))}`, { method: 'POST' });
-export const getTripMembers = (tripId: number) => fetcher<Friend[]>(`/trips/${tripId}/members`);
-export const inviteTripMember = (tripId: number, friendUserId: number) => fetcher<{ ok: boolean }>(`/trips/${tripId}/members/${friendUserId}`, { method: 'POST' });
+export const getTripMembers = (tripId: number) => fetcher<TripMember[]>(`/trips/${tripId}/members`);
+export const inviteTripMember = (tripId: number, friendUserId: number, role: 'viewer' | 'editor' = 'viewer') =>
+    fetcher<{ ok: boolean }>(`/trips/${tripId}/members/${friendUserId}?role=${encodeURIComponent(role)}`, { method: 'POST' });
 export const removeTripMember = (tripId: number, memberUserId: number) => fetcher<{ ok: boolean }>(`/trips/${tripId}/members/${memberUserId}`, { method: 'DELETE' });
+export const setTripMemberRole = (tripId: number, memberUserId: number, role: 'viewer' | 'editor') =>
+    fetcher<{ ok: boolean }>(`/trips/${tripId}/members/${memberUserId}/role`, { method: 'POST', body: JSON.stringify({ role }) });
 
 // ── Persons ──
 export const getPersons = () => fetcher<Person[]>('/persons');

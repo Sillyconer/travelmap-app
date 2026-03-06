@@ -172,3 +172,62 @@ async def test_trip_invite_creates_notification_for_invited_friend():
         trip_invites = [n for n in notifications.json() if n["type"] == "trip_invite"]
         assert len(trip_invites) == 1
         assert trip_invites[0]["payload"]["tripId"] == trip.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_trip_member_roles_affect_edit_permissions():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as owner_client, AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as member_client:
+        owner_register = await owner_client.post(
+            "/api/auth/register",
+            json={"username": "owner2", "displayName": "Owner", "password": "secret"},
+        )
+        member_register = await member_client.post(
+            "/api/auth/register",
+            json={"username": "member", "displayName": "Member", "password": "secret"},
+        )
+        assert owner_register.status_code == 201
+        assert member_register.status_code == 201
+
+        owner_client.headers.update({"Authorization": f"Bearer {owner_register.json()['token']}"})
+        member_client.headers.update({"Authorization": f"Bearer {member_register.json()['token']}"})
+
+        request = await member_client.post("/api/social/friend-requests", json={"username": "owner2"})
+        assert request.status_code == 201
+        accepted = await owner_client.post(f"/api/social/friend-requests/{request.json()['id']}/accept")
+        assert accepted.status_code == 200
+
+        trip = await owner_client.post(
+            "/api/trips",
+            json={"name": "Role Test", "color": "#1144AA", "visibility": "friends_only"},
+        )
+        assert trip.status_code == 201
+        trip_id = trip.json()["id"]
+
+        invited = await owner_client.post(
+            f"/api/trips/{trip_id}/members/{member_register.json()['user']['id']}?role=viewer"
+        )
+        assert invited.status_code == 200
+
+        member_trip = await member_client.get(f"/api/trips/{trip_id}")
+        assert member_trip.status_code == 200
+        assert member_trip.json()["accessRole"] == "viewer"
+
+        cannot_add_place = await member_client.post(
+            f"/api/trips/{trip_id}/places",
+            json={"name": "Blocked", "lat": 40.0, "lng": -73.0, "note": ""},
+        )
+        assert cannot_add_place.status_code == 403
+
+        role_update = await owner_client.post(
+            f"/api/trips/{trip_id}/members/{member_register.json()['user']['id']}/role",
+            json={"role": "editor"},
+        )
+        assert role_update.status_code == 200
+
+        can_add_place = await member_client.post(
+            f"/api/trips/{trip_id}/places",
+            json={"name": "Now Allowed", "lat": 51.5, "lng": -0.1, "note": ""},
+        )
+        assert can_add_place.status_code == 201

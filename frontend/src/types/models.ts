@@ -31,6 +31,10 @@ export interface Friend {
     homeCurrency: string;
 }
 
+export interface TripMember extends Friend {
+    role: 'viewer' | 'editor';
+}
+
 export interface FriendRequest {
     id: number;
     fromUserId: number;
@@ -166,6 +170,7 @@ export interface Trip {
     visibility: 'friends_only' | 'anyone_with_link';
     ownerUserId: number;
     isShared: boolean;
+    accessRole: 'owner' | 'editor' | 'viewer';
     places: Place[];
     photos: PhotoOut[];
     personIds: number[];

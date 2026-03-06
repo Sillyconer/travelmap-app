@@ -37,6 +37,8 @@ async def upload_photo(
     trip = await store.get_trip(trip_id, current_user.id)
     if not trip:
         raise HTTPException(404, f"Trip {trip_id} not found")
+    if not await store.user_can_edit_trip(current_user.id, trip_id):
+        raise HTTPException(403, "You only have viewer access to this trip")
 
     new_photo = await process_and_save_upload(file, trip_id, current_user.id, store)
 
@@ -86,6 +88,8 @@ async def assign_photo(photo_id: int, data: PhotoAssign, current_user: UserOut =
         trip = await store.get_trip(data.trip_id, current_user.id)
         if not trip:
             raise HTTPException(404, f"Trip {data.trip_id} not found")
+        if not await store.user_can_edit_trip(current_user.id, data.trip_id):
+            raise HTTPException(403, "You only have viewer access to this trip")
 
     photo = await store.assign_photo(current_user.id, photo_id, data.trip_id, data.place_id)
     if not photo:
@@ -96,6 +100,8 @@ async def assign_photo(photo_id: int, data: PhotoAssign, current_user: UserOut =
 @router.post("/api/trips/{trip_id}/photos/{photo_id}/update", response_model=PhotoOut)
 async def update_photo(trip_id: int, photo_id: int, data: PhotoUpdate, current_user: UserOut = Depends(get_current_user)):
     store = get_store()
+    if not await store.user_can_edit_trip(current_user.id, trip_id):
+        raise HTTPException(403, "You only have viewer access to this trip")
     photo = await store.update_photo(current_user.id, trip_id, photo_id, data.place_id)
     if not photo:
         raise HTTPException(404, f"Photo {photo_id} not found in trip {trip_id}")
@@ -105,6 +111,8 @@ async def update_photo(trip_id: int, photo_id: int, data: PhotoUpdate, current_u
 @router.delete("/api/trips/{trip_id}/photos/{photo_id}")
 async def delete_photo(trip_id: int, photo_id: int, current_user: UserOut = Depends(get_current_user)):
     store = get_store()
+    if not await store.user_can_edit_trip(current_user.id, trip_id):
+        raise HTTPException(403, "You only have viewer access to this trip")
     async with store.db.execute(
         "SELECT filename FROM photos WHERE id = ? AND trip_id = ? AND user_id = ?",
         (photo_id, trip_id, current_user.id),

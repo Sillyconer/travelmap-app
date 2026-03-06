@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from models import FriendOut, Trip, TripCreate, TripUpdate, UserOut
+from models import Trip, TripCreate, TripMemberOut, TripMemberRoleUpdate, TripUpdate, UserOut
 from dependencies import get_current_user, get_store
 
 router = APIRouter(prefix="/api/trips", tags=["trips"])
@@ -42,6 +42,8 @@ async def create_trip(data: TripCreate, current_user: UserOut = Depends(get_curr
 async def update_trip(trip_id: int, data: TripUpdate, current_user: UserOut = Depends(get_current_user)):
     """Update trip metadata."""
     store = get_store()
+    if not await store.user_is_trip_owner(current_user.id, trip_id):
+        raise HTTPException(403, "Only trip owners can update trip settings")
     trip = await store.update_trip(trip_id, current_user.id, data)
     if not trip:
         raise HTTPException(404, f"Trip {trip_id} not found")
@@ -52,6 +54,8 @@ async def update_trip(trip_id: int, data: TripUpdate, current_user: UserOut = De
 async def delete_trip(trip_id: int, current_user: UserOut = Depends(get_current_user)):
     """Delete a trip and all associated data."""
     store = get_store()
+    if not await store.user_is_trip_owner(current_user.id, trip_id):
+        raise HTTPException(403, "Only trip owners can delete trips")
     if not await store.delete_trip(trip_id, current_user.id):
         raise HTTPException(404, f"Trip {trip_id} not found")
     return {"ok": True}
@@ -64,6 +68,8 @@ async def assign_persons(trip_id: int, person_ids: str, current_user: UserOut = 
     Accepts a comma-separated list of person IDs.
     """
     store = get_store()
+    if not await store.user_is_trip_owner(current_user.id, trip_id):
+        raise HTTPException(403, "Only trip owners can assign travellers")
     ids = [int(x.strip()) for x in person_ids.split(",") if x.strip()]
     trip = await store.set_trip_persons(trip_id, current_user.id, ids)
     if not trip:
@@ -71,7 +77,7 @@ async def assign_persons(trip_id: int, person_ids: str, current_user: UserOut = 
     return trip
 
 
-@router.get("/{trip_id}/members", response_model=list[FriendOut])
+@router.get("/{trip_id}/members", response_model=list[TripMemberOut])
 async def list_trip_members(trip_id: int, current_user: UserOut = Depends(get_current_user)):
     store = get_store()
     if not await store.user_can_access_trip(current_user.id, trip_id):
@@ -80,11 +86,16 @@ async def list_trip_members(trip_id: int, current_user: UserOut = Depends(get_cu
 
 
 @router.post("/{trip_id}/members/{friend_user_id}")
-async def invite_trip_member(trip_id: int, friend_user_id: int, current_user: UserOut = Depends(get_current_user)):
+async def invite_trip_member(
+    trip_id: int,
+    friend_user_id: int,
+    role: str = "viewer",
+    current_user: UserOut = Depends(get_current_user),
+):
     store = get_store()
-    ok = await store.invite_friend_to_trip(current_user.id, trip_id, friend_user_id)
+    ok = await store.invite_friend_to_trip(current_user.id, trip_id, friend_user_id, role)
     if not ok:
-        raise HTTPException(400, "Only owners can invite friends to this trip")
+        raise HTTPException(400, "Unable to invite friend to trip")
     return {"ok": True}
 
 
@@ -94,4 +105,18 @@ async def remove_trip_member(trip_id: int, member_user_id: int, current_user: Us
     ok = await store.remove_trip_member(current_user.id, trip_id, member_user_id)
     if not ok:
         raise HTTPException(400, "Only owners can remove trip members")
+    return {"ok": True}
+
+
+@router.post("/{trip_id}/members/{member_user_id}/role")
+async def update_trip_member_role(
+    trip_id: int,
+    member_user_id: int,
+    data: TripMemberRoleUpdate,
+    current_user: UserOut = Depends(get_current_user),
+):
+    store = get_store()
+    ok = await store.set_trip_member_role(current_user.id, trip_id, member_user_id, data.role)
+    if not ok:
+        raise HTTPException(400, "Unable to update trip member role")
     return {"ok": True}

@@ -11,9 +11,10 @@ interface SortablePlaceCardProps {
     total: number;
     tripColor: string;
     onDelete: (id: number) => void;
+    canEdit: boolean;
 }
 
-export const SortablePlaceCard = ({ place, index, total, tripColor, onDelete }: SortablePlaceCardProps) => {
+export const SortablePlaceCard = ({ place, index, total, tripColor, onDelete, canEdit }: SortablePlaceCardProps) => {
     const {
         attributes,
         listeners,
@@ -35,7 +36,7 @@ export const SortablePlaceCard = ({ place, index, total, tripColor, onDelete }: 
             <Card className={`${styles.placeCard} ${isDragging ? styles.dragging : ''}`}>
 
                 {/* Drag Handle */}
-                <div className={styles.dragHandle} {...attributes} {...listeners}>
+                <div className={styles.dragHandle} {...(canEdit ? attributes : {})} {...(canEdit ? listeners : {})}>
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--md-sys-color-on-surface-variant)">
                         <path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
                     </svg>
@@ -51,16 +52,18 @@ export const SortablePlaceCard = ({ place, index, total, tripColor, onDelete }: 
                 <div className={styles.placeContent}>
                     <div className={styles.placeHeader}>
                         <h3>{place.name}</h3>
-                        <div className={styles.placeActions}>
-                            <Button
-                                variant="text"
-                                size="sm"
-                                onClick={() => onDelete(place.id)}
-                                style={{ color: 'var(--md-sys-color-error)' }}
-                            >
-                                Delete
-                            </Button>
-                        </div>
+                        {canEdit && (
+                            <div className={styles.placeActions}>
+                                <Button
+                                    variant="text"
+                                    size="sm"
+                                    onClick={() => onDelete(place.id)}
+                                    style={{ color: 'var(--md-sys-color-error)' }}
+                                >
+                                    Delete
+                                </Button>
+                            </div>
+                        )}
                     </div>
                     {place.note && <p className={styles.placeNote}>{place.note}</p>}
                     <div className={styles.placeCoords}>
