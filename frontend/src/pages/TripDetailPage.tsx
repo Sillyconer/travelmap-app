@@ -45,6 +45,7 @@ export const TripDetailPage = () => {
 
     const [trip, setTrip] = useState<Trip | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     // Add Place Modal State
     const [isAddPlaceOpen, setIsAddPlaceOpen] = useState(false);
@@ -94,17 +95,18 @@ export const TripDetailPage = () => {
     useEffect(() => {
         const loadTrip = async () => {
             if (!id) return;
-            const tripId = Number(id);
+            setLoadError(null);
 
             // Use local store as immediate paint, but still fetch server data after.
-            const localTrip = trips.find((t: Trip) => t.id === Number(id));
+            const localTrip = trips.find((t: Trip) => t.publicId === id);
             if (localTrip && localTrip.places) {
                 setTrip(localTrip);
                 setIsLoading(false);
             }
 
             try {
-                const freshData = await api.getTrip(tripId);
+                const freshData = await api.getTripByPublicId(id);
+                const tripId = freshData.id;
                 setTrip(freshData);
                 updateTripInStore(freshData);
 
@@ -130,9 +132,9 @@ export const TripDetailPage = () => {
 
                 const loadedPlan = await api.getItineraryItems(tripId).catch(() => []);
                 setItineraryItems(loadedPlan);
-            } catch (err) {
-                showSnackbar('Failed to load trip details');
-                navigate('/trips');
+            } catch (err: any) {
+                setLoadError(err?.message || 'Failed to load trip details');
+                setTrip(null);
             } finally {
                 setIsLoading(false);
             }
@@ -412,7 +414,14 @@ export const TripDetailPage = () => {
         return <div className={styles.loading}>Loading trip data...</div>;
     }
 
-    if (!trip) return null;
+    if (!trip) {
+        return (
+            <div className={styles.loading}>
+                {loadError || 'Trip not found or inaccessible.'}
+                <Button variant="text" onClick={() => navigate('/trips')}>Back to trips</Button>
+            </div>
+        );
+    }
 
     const handleShareAlbum = async () => {
         try {
@@ -469,7 +478,7 @@ export const TripDetailPage = () => {
         && (expenseSplitMode === 'equal' || Math.abs(customSplitRemaining) <= 0.01);
     const invitedFriendIds = new Set(members.map(m => m.id));
     const invitables = friends.filter(f => !invitedFriendIds.has(f.id));
-    const itineraryByDay = useMemo(() => {
+    const itineraryByDay = (() => {
         const grouped = new Map<number, ItineraryItem[]>();
         for (const item of itineraryItems) {
             if (!grouped.has(item.dayIndex)) {
@@ -478,7 +487,7 @@ export const TripDetailPage = () => {
             grouped.get(item.dayIndex)!.push(item);
         }
         return Array.from(grouped.entries()).sort((a, b) => a[0] - b[0]);
-    }, [itineraryItems]);
+    })();
 
     const handleInviteFriend = async () => {
         if (!selectedFriendId) return;
@@ -630,7 +639,7 @@ export const TripDetailPage = () => {
                                         className={styles.memberIdentityBtn}
                                         onClick={() => navigate(`/profiles/${member.username}`)}
                                     >
-                                        <Avatar seed={member.username} name={member.displayName} size={30} />
+                                        <Avatar seed={member.username} name={member.displayName} imageUrl={member.avatarUrl} size={30} />
                                         <span>{member.displayName} (@{member.username}) · {member.role}</span>
                                     </button>
                                     {isOwner && (

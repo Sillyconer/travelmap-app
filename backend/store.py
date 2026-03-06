@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 import aiosqlite
 from pathlib import Path
 
@@ -35,6 +36,7 @@ from models import (
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS trips (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id   TEXT    NOT NULL UNIQUE,
     name        TEXT    NOT NULL,
     color       TEXT    NOT NULL DEFAULT '#E74C3C',
     description TEXT    NOT NULL DEFAULT '',
@@ -123,6 +125,7 @@ CREATE TABLE IF NOT EXISTS users (
     home_country  TEXT    NOT NULL DEFAULT '',
     home_currency TEXT    NOT NULL DEFAULT 'USD',
     profile_theme TEXT    NOT NULL DEFAULT 'dark-matter',
+    avatar_url    TEXT    NOT NULL DEFAULT '',
     about_me      TEXT    NOT NULL DEFAULT '',
     show_world_map INTEGER NOT NULL DEFAULT 1,
     show_featured_trips INTEGER NOT NULL DEFAULT 1,
@@ -295,7 +298,9 @@ class Store:
         await self._ensure_column("users", "home_country", "TEXT NOT NULL DEFAULT ''")
         await self._ensure_column("users", "home_currency", "TEXT NOT NULL DEFAULT 'USD'")
         await self._ensure_column("users", "profile_theme", "TEXT NOT NULL DEFAULT 'dark-matter'")
+        await self._ensure_column("users", "avatar_url", "TEXT NOT NULL DEFAULT ''")
         await self._ensure_column("users", "about_me", "TEXT NOT NULL DEFAULT ''")
+        await self._ensure_column("trips", "public_id", "TEXT NOT NULL DEFAULT ''")
         await self._ensure_column("users", "show_world_map", "INTEGER NOT NULL DEFAULT 1")
         await self._ensure_column("users", "show_featured_trips", "INTEGER NOT NULL DEFAULT 1")
         await self._ensure_column("users", "show_favorite_photos", "INTEGER NOT NULL DEFAULT 1")
@@ -313,6 +318,10 @@ class Store:
         await self.db.execute("UPDATE notifications SET occurrence_count = 1 WHERE occurrence_count IS NULL OR occurrence_count < 1")
         await self.db.execute("UPDATE notifications SET is_archived = 0 WHERE is_archived IS NULL")
         await self.db.execute("UPDATE notifications SET updated_at = created_at WHERE updated_at IS NULL")
+        rows = await self.db.execute_fetchall("SELECT id FROM trips WHERE public_id IS NULL OR public_id = ''")
+        for row in rows:
+            await self.db.execute("UPDATE trips SET public_id = ? WHERE id = ?", (str(uuid.uuid4()), int(row["id"])))
+        await self.db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_trips_public_id ON trips(public_id)")
 
         await self.db.execute(
             """
@@ -539,10 +548,18 @@ class Store:
             return None
         return await self._build_trip(dict(row), user_id)
 
+    async def get_trip_by_public_id(self, public_id: str, user_id: int) -> Trip | None:
+        async with self.db.execute("SELECT id FROM trips WHERE public_id = ?", (public_id,)) as cursor:
+            row = await cursor.fetchone()
+        if not row:
+            return None
+        return await self.get_trip(int(row["id"]), user_id)
+
     async def create_trip(self, user_id: int, data: TripCreate) -> Trip:
+        public_id = str(uuid.uuid4())
         cursor = await self.db.execute(
-            "INSERT INTO trips (name, color, user_id, visibility) VALUES (?, ?, ?, ?)",
-            (data.name, data.color, user_id, data.visibility),
+            "INSERT INTO trips (public_id, name, color, user_id, visibility) VALUES (?, ?, ?, ?, ?)",
+            (public_id, data.name, data.color, user_id, data.visibility),
         )
         await self.db.commit()
         last_id = int(cursor.lastrowid or 0)
@@ -604,6 +621,7 @@ class Store:
         person_ids = await self._get_trip_person_ids(trip_id, viewer_user_id=user_id, owner_user_id=row["user_id"])
         return Trip(
             id=row["id"],
+            publicId=row["public_id"],
             name=row["name"],
             color=row["color"],
             description=row["description"],
@@ -1169,6 +1187,7 @@ class Store:
             homeCountry=row["home_country"],
             homeCurrency=row["home_currency"],
             profileTheme=row["profile_theme"],
+            avatarUrl=row["avatar_url"] or "",
             createdAt=row["created_at"],
         )
 
@@ -1192,8 +1211,14 @@ class Store:
             homeCountry=row["home_country"],
             homeCurrency=row["home_currency"],
             profileTheme=row["profile_theme"],
+            avatarUrl=row["avatar_url"] or "",
             createdAt=row["created_at"],
         )
+
+    async def set_user_avatar_url(self, user_id: int, avatar_url: str) -> UserOut | None:
+        await self.db.execute("UPDATE users SET avatar_url = ? WHERE id = ?", (avatar_url, user_id))
+        await self.db.commit()
+        return await self.get_user_by_id(user_id)
 
     async def list_currency_codes(self) -> list[str]:
         rows = await self.db.execute_fetchall("SELECT DISTINCT home_currency AS currency FROM users UNION SELECT DISTINCT currency FROM expenses")
@@ -1267,7 +1292,7 @@ class Store:
 
         friend_rows = await self.db.execute_fetchall(
             """
-            SELECT u.id, u.username, u.display_name, u.home_country, u.home_currency
+            SELECT u.id, u.username, u.display_name, u.avatar_url, u.home_country, u.home_currency
             FROM profile_featured_friends pff
             JOIN users u ON u.id = pff.friend_user_id
             WHERE pff.user_id = ?
@@ -1280,6 +1305,7 @@ class Store:
                 userId=r["id"],
                 username=r["username"],
                 displayName=r["display_name"],
+                avatarUrl=r["avatar_url"] or "",
                 homeCountry=r["home_country"],
                 homeCurrency=r["home_currency"],
             )
@@ -1315,6 +1341,7 @@ class Store:
             userId=user["id"],
             username=user["username"],
             displayName=user["display_name"],
+            avatarUrl=user["avatar_url"] or "",
             homeCountry=user["home_country"],
             homeCurrency=user["home_currency"],
             profileTheme=user["profile_theme"],
@@ -1334,7 +1361,7 @@ class Store:
         term = f"%{query.strip()}%"
         rows = await self.db.execute_fetchall(
             """
-            SELECT u.id, u.username, u.display_name, u.profile_theme, u.about_me,
+            SELECT u.id, u.username, u.display_name, u.avatar_url, u.profile_theme, u.about_me,
                    CASE WHEN f.user_id IS NULL THEN 0 ELSE 1 END AS is_friend
             FROM users u
             LEFT JOIN friends f ON f.user_id = ? AND f.friend_user_id = u.id
@@ -1349,6 +1376,7 @@ class Store:
                 userId=r["id"],
                 username=r["username"],
                 displayName=r["display_name"],
+                avatarUrl=r["avatar_url"] or "",
                 profileTheme=r["profile_theme"],
                 aboutMe=r["about_me"] or "",
                 isFriend=bool(r["is_friend"]),
@@ -1511,7 +1539,7 @@ class Store:
         )
         friends_rows = await self.db.execute_fetchall(
             """
-            SELECT u.id, u.username, u.display_name, u.home_country, u.home_currency
+            SELECT u.id, u.username, u.display_name, u.avatar_url, u.home_country, u.home_currency
             FROM friends f
             JOIN users u ON u.id = f.friend_user_id
             WHERE f.user_id = ?
@@ -1544,6 +1572,7 @@ class Store:
                     userId=r["id"],
                     username=r["username"],
                     displayName=r["display_name"],
+                    avatarUrl=r["avatar_url"] or "",
                     homeCountry=r["home_country"],
                     homeCurrency=r["home_currency"],
                 ).model_dump(by_alias=True)
@@ -1824,6 +1853,13 @@ class Store:
         )
         comment_id = int(cursor.lastrowid or 0)
 
+        trip_public_id: str | None = None
+        if entity_type == "trip":
+            async with self.db.execute("SELECT public_id FROM trips WHERE id = ?", (data.entity_id,)) as cursor_trip:
+                trip_row = await cursor_trip.fetchone()
+            if trip_row:
+                trip_public_id = trip_row["public_id"]
+
         author = await self.get_user_by_id(user_id)
         if author:
             mention_usernames = {m.group(1).lower() for m in MENTION_RE.finditer(body)}
@@ -1842,8 +1878,10 @@ class Store:
                         "commentId": comment_id,
                         "entityType": entity_type,
                         "entityId": data.entity_id,
+                        "tripPublicId": trip_public_id,
                         "fromUserId": author.id,
                         "fromUsername": author.username,
+                        "fromDisplayName": author.display_name,
                     },
                     commit=False,
                 )
@@ -1855,6 +1893,11 @@ class Store:
                 ) as cursor:
                     photo_row = await cursor.fetchone()
                 if photo_row:
+                    if photo_row["trip_id"] is not None:
+                        async with self.db.execute("SELECT public_id FROM trips WHERE id = ?", (int(photo_row["trip_id"]),)) as cursor_trip:
+                            linked_trip = await cursor_trip.fetchone()
+                        if linked_trip:
+                            trip_public_id = linked_trip["public_id"]
                     photo_owner_id = int(photo_row["user_id"])
                     if photo_owner_id != user_id:
                         await self.create_notification(
@@ -1867,8 +1910,10 @@ class Store:
                                 "entityType": "photo",
                                 "entityId": data.entity_id,
                                 "tripId": photo_row["trip_id"],
+                                "tripPublicId": trip_public_id,
                                 "fromUserId": author.id,
                                 "fromUsername": author.username,
+                                "fromDisplayName": author.display_name,
                             },
                             commit=False,
                         )
@@ -2169,6 +2214,7 @@ class Store:
                 id=r["id"],
                 username=r["username"],
                 displayName=r["display_name"],
+                avatarUrl=r["avatar_url"] or "",
                 personId=r["person_id"],
                 homeCountry=r["home_country"],
                 homeCurrency=r["home_currency"],
@@ -2211,7 +2257,7 @@ class Store:
         term = f"%{query.strip()}%"
         rows = await self.db.execute_fetchall(
             """
-            SELECT u.id, u.username, u.display_name, u.home_country, u.home_currency,
+            SELECT u.id, u.username, u.display_name, u.avatar_url, u.home_country, u.home_currency,
                    CASE WHEN f.user_id IS NULL THEN 0 ELSE 1 END AS is_friend,
                    CASE WHEN incoming.id IS NULL THEN 0 ELSE 1 END AS has_incoming,
                    CASE WHEN outgoing.id IS NULL THEN 0 ELSE 1 END AS has_outgoing
@@ -2233,6 +2279,7 @@ class Store:
                 "id": r["id"],
                 "username": r["username"],
                 "displayName": r["display_name"],
+                "avatarUrl": r["avatar_url"] or "",
                 "homeCountry": r["home_country"],
                 "homeCurrency": r["home_currency"],
                 "isFriend": bool(r["is_friend"]),
@@ -2250,7 +2297,7 @@ class Store:
 
         trip_rows = await self.db.execute_fetchall(
             """
-            SELECT DISTINCT t.id, t.name, t.color,
+            SELECT DISTINCT t.id, t.public_id, t.name, t.color,
                    CASE
                      WHEN lower(t.name) = lower(?) THEN 0
                      WHEN lower(t.name) LIKE lower(?) THEN 1
@@ -2268,7 +2315,7 @@ class Store:
 
         place_rows = await self.db.execute_fetchall(
             """
-            SELECT p.id, p.name, p.note, p.trip_id, t.name AS trip_name,
+            SELECT p.id, p.name, p.note, p.trip_id, t.public_id AS trip_public_id, t.name AS trip_name,
                    CASE
                      WHEN lower(p.name) = lower(?) THEN 0
                      WHEN lower(p.name) LIKE lower(?) THEN 1
@@ -2287,7 +2334,7 @@ class Store:
 
         photo_rows = await self.db.execute_fetchall(
             """
-            SELECT p.id, p.name, p.thumb_url, p.trip_id, t.name AS trip_name,
+            SELECT p.id, p.name, p.thumb_url, p.trip_id, t.public_id AS trip_public_id, t.name AS trip_name,
                    CASE
                      WHEN lower(p.name) = lower(?) THEN 0
                      WHEN lower(p.name) LIKE lower(?) THEN 1
@@ -2305,7 +2352,7 @@ class Store:
 
         profile_rows = await self.db.execute_fetchall(
             """
-            SELECT u.id, u.username, u.display_name,
+            SELECT u.id, u.username, u.display_name, u.avatar_url,
                    CASE WHEN f.user_id IS NULL THEN 0 ELSE 1 END AS is_friend,
                    CASE
                      WHEN lower(u.username) = lower(?) OR lower(u.display_name) = lower(?) THEN 0
@@ -2328,7 +2375,7 @@ class Store:
                     "id": r["id"],
                     "name": r["name"],
                     "color": r["color"],
-                    "route": f"/trips/{r['id']}",
+                    "route": f"/trips/{r['public_id']}",
                 }
                 for r in trip_rows
             ],
@@ -2339,7 +2386,7 @@ class Store:
                     "note": r["note"] or "",
                     "tripId": r["trip_id"],
                     "tripName": r["trip_name"],
-                    "route": f"/trips/{r['trip_id']}",
+                    "route": f"/trips/{r['trip_public_id']}",
                 }
                 for r in place_rows
             ],
@@ -2350,7 +2397,7 @@ class Store:
                     "thumbUrl": r["thumb_url"],
                     "tripId": r["trip_id"],
                     "tripName": r["trip_name"] or "Unassigned",
-                    "route": "/photos" if r["trip_id"] is None else f"/trips/{r['trip_id']}",
+                    "route": "/photos" if r["trip_id"] is None else f"/trips/{r['trip_public_id']}",
                 }
                 for r in photo_rows
             ],
@@ -2359,6 +2406,7 @@ class Store:
                     "id": r["id"],
                     "username": r["username"],
                     "displayName": r["display_name"],
+                    "avatarUrl": r["avatar_url"] or "",
                     "isFriend": bool(r["is_friend"]),
                     "route": f"/profiles/{r['username']}",
                 }
@@ -2378,7 +2426,7 @@ class Store:
             clean_role = "editor"
         if clean_role not in VALID_TRIP_MEMBER_ROLES:
             return False
-        async with self.db.execute("SELECT name FROM trips WHERE id = ?", (trip_id,)) as cursor:
+        async with self.db.execute("SELECT name, public_id FROM trips WHERE id = ?", (trip_id,)) as cursor:
             trip_row = await cursor.fetchone()
         if not trip_row:
             return False
@@ -2393,7 +2441,7 @@ class Store:
                 "trip_invite",
                 "Trip invite",
                 f"{owner.display_name} invited you to '{trip_row['name']}'.",
-                payload={"tripId": trip_id, "ownerUserId": owner_user_id},
+                payload={"tripId": trip_id, "tripPublicId": trip_row["public_id"], "ownerUserId": owner_user_id},
                 commit=False,
             )
         await self.db.commit()
@@ -2442,6 +2490,7 @@ class Store:
                 id=r["id"],
                 username=r["username"],
                 displayName=r["display_name"],
+                avatarUrl=r["avatar_url"] or "",
                 personId=r["person_id"],
                 homeCountry=r["home_country"],
                 homeCurrency=r["home_currency"],

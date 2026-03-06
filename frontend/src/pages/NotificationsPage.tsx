@@ -80,6 +80,10 @@ export const NotificationsPage = () => {
 
     const routeForNotification = (item: NotificationItem): string | null => {
         const payload = item.payload as Record<string, unknown>;
+        const tripPublicId = payload.tripPublicId;
+        if (typeof tripPublicId === 'string' && tripPublicId.trim()) {
+            return `/trips/${tripPublicId}`;
+        }
         const tripId = payload.tripId;
         if (typeof tripId === 'number') {
             return `/trips/${tripId}`;

@@ -13,12 +13,14 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 PHOTOS_DIR = DATA_DIR / "photos"
 THUMBS_DIR = PHOTOS_DIR / "thumbs"
+AVATARS_DIR = DATA_DIR / "avatars"
 DB_PATH = DATA_DIR / "travelmap.db"
 
 # Ensure runtime directories exist
 DATA_DIR.mkdir(exist_ok=True)
 PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
 THUMBS_DIR.mkdir(parents=True, exist_ok=True)
+AVATARS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Server ────────────────────────────────────────────────────────────────────
 HOST = "0.0.0.0"

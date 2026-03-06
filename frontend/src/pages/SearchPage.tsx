@@ -251,7 +251,7 @@ export const SearchPage = () => {
                         <div className={styles.list}>
                             {results.profiles.map(item => (
                                 <Link key={`profile-${item.id}`} to={item.route} className={styles.item}>
-                                    <Avatar seed={item.username} name={item.displayName} size={32} />
+                                    <Avatar seed={item.username} name={item.displayName} imageUrl={item.avatarUrl} size={32} />
                                     <span className={styles.profileResultMeta}>
                                         <span>{highlightText(item.displayName)}</span>
                                         <small>@{highlightText(item.username)}{item.isFriend ? ' · friend' : ''}</small>

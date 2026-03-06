@@ -18,6 +18,7 @@ export interface User {
     personId: number;
     homeCountry: string;
     homeCurrency: string;
+    avatarUrl: string;
     profileTheme: 'dark-matter' | 'positron' | 'voyager' | 'oceanic' | 'atlas-sand' | 'pine-trail';
     createdAt: string;
 }
@@ -26,6 +27,7 @@ export interface Friend {
     id: number;
     username: string;
     displayName: string;
+    avatarUrl: string;
     personId: number;
     homeCountry: string;
     homeCurrency: string;
@@ -51,6 +53,7 @@ export interface UserSearchResult {
     id: number;
     username: string;
     displayName: string;
+    avatarUrl?: string;
     homeCountry: string;
     homeCurrency: string;
     isFriend: boolean;
@@ -99,6 +102,7 @@ export interface SearchProfileResult {
     id: number;
     username: string;
     displayName: string;
+    avatarUrl: string;
     isFriend: boolean;
     route: string;
 }
@@ -158,6 +162,7 @@ export interface ProfileFriend {
     userId: number;
     username: string;
     displayName: string;
+    avatarUrl: string;
     homeCountry: string;
     homeCurrency: string;
 }
@@ -166,6 +171,7 @@ export interface Profile {
     userId: number;
     username: string;
     displayName: string;
+    avatarUrl: string;
     homeCountry: string;
     homeCurrency: string;
     profileTheme: 'dark-matter' | 'positron' | 'voyager' | 'oceanic' | 'atlas-sand' | 'pine-trail';
@@ -185,6 +191,7 @@ export interface ProfileSearchResult {
     userId: number;
     username: string;
     displayName: string;
+    avatarUrl: string;
     profileTheme: 'dark-matter' | 'positron' | 'voyager' | 'oceanic' | 'atlas-sand' | 'pine-trail';
     aboutMe: string;
     isFriend: boolean;
@@ -233,6 +240,7 @@ export interface LibraryPhoto extends PhotoOut {
 
 export interface Trip {
     id: number;
+    publicId: string;
     name: string;
     color: string;
     description: string;

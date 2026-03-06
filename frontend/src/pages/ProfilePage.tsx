@@ -190,6 +190,31 @@ export const ProfilePage = () => {
         }
     };
 
+    const handleAvatarUpload = async (file: File | null) => {
+        if (!file) {
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const updated = await api.uploadMyAvatar(formData);
+            setProfile(updated);
+            showSnackbar('Profile photo updated');
+        } catch (err: any) {
+            showSnackbar(`Failed to upload profile photo: ${err.message}`);
+        }
+    };
+
+    const handleAvatarRemove = async () => {
+        try {
+            const updated = await api.deleteMyAvatar();
+            setProfile(updated);
+            showSnackbar('Profile photo removed');
+        } catch (err: any) {
+            showSnackbar(`Failed to remove profile photo: ${err.message}`);
+        }
+    };
+
     if (isLoading) {
         return <div className={styles.loading}>Loading profile...</div>;
     }
@@ -203,7 +228,7 @@ export const ProfilePage = () => {
             <div className={styles.inner}>
                 <Card className={styles.hero}>
                     <div className={styles.heroHead}>
-                        <Avatar seed={profile.username} name={profile.displayName} size={84} />
+                        <Avatar seed={profile.username} name={profile.displayName} imageUrl={profile.avatarUrl} size={84} />
                         <div>
                             <h1 className={styles.name}>{profile.displayName}</h1>
                             <p className={styles.username}>@{profile.username}</p>
@@ -300,7 +325,7 @@ export const ProfilePage = () => {
                                     onClick={() => navigate(`/profiles/${friend.username}`)}
                                 >
                                     <div className={styles.friendHead}>
-                                        <Avatar seed={friend.username} name={friend.displayName} size={34} />
+                                        <Avatar seed={friend.username} name={friend.displayName} imageUrl={friend.avatarUrl} size={34} />
                                         <div>
                                             <strong>{friend.displayName}</strong>
                                             <span>@{friend.username}</span>
@@ -317,6 +342,24 @@ export const ProfilePage = () => {
                 {isSelf && (
                     <Card className={styles.editor}>
                         <h3>Edit Profile</h3>
+                        <div className={styles.avatarEditorRow}>
+                            <Avatar seed={profile.username} name={profile.displayName} imageUrl={profile.avatarUrl} size={64} />
+                            <label className={styles.avatarUploadLabel}>
+                                Upload profile photo
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0] ?? null;
+                                        handleAvatarUpload(file);
+                                        e.currentTarget.value = '';
+                                    }}
+                                />
+                            </label>
+                            {profile.avatarUrl && (
+                                <Button size="sm" variant="text" onClick={handleAvatarRemove}>Remove photo</Button>
+                            )}
+                        </div>
                         <div className={styles.formGrid}>
                             <Input label="Display Name" value={displayName} onChange={e => setDisplayName(e.target.value)} fullWidth />
                             <Input label="Home Country" value={homeCountry} onChange={e => setHomeCountry(e.target.value.toUpperCase())} fullWidth />

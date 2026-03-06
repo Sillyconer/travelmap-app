@@ -202,7 +202,7 @@ export const ManagePersonsPage = () => {
                                     type="button"
                                 >
                                     <span className={styles.userInline}>
-                                        <Avatar seed={user.username} name={user.displayName} size={28} />
+                                        <Avatar seed={user.username} name={user.displayName} imageUrl={user.avatarUrl} size={28} />
                                         <span>{user.displayName} (@{user.username})</span>
                                     </span>
                                     <span className={styles.searchMeta}>
@@ -254,7 +254,7 @@ export const ManagePersonsPage = () => {
                                 <div key={friend.id} className={styles.requestItem}>
                                     <button type="button" className={styles.profileLinkBtn} onClick={() => navigate(`/profiles/${friend.username}`)}>
                                         <span className={styles.userInline}>
-                                            <Avatar seed={friend.username} name={friend.displayName} size={28} />
+                                            <Avatar seed={friend.username} name={friend.displayName} imageUrl={friend.avatarUrl} size={28} />
                                             <span>{friend.displayName} (@{friend.username})</span>
                                         </span>
                                     </button>

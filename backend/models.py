@@ -53,6 +53,7 @@ class UserOut(BaseModel):
     home_country: str = Field("", alias="homeCountry")
     home_currency: str = Field("USD", alias="homeCurrency")
     profile_theme: str = Field("dark-matter", alias="profileTheme")
+    avatar_url: str = Field("", alias="avatarUrl")
     created_at: str = Field(alias="createdAt")
 
     model_config = {"populate_by_name": True}
@@ -166,6 +167,7 @@ class ProfileFriendOut(BaseModel):
     user_id: int = Field(alias="userId")
     username: str
     display_name: str = Field(alias="displayName")
+    avatar_url: str = Field("", alias="avatarUrl")
     home_country: str = Field("", alias="homeCountry")
     home_currency: str = Field("USD", alias="homeCurrency")
 
@@ -176,6 +178,7 @@ class ProfileOut(BaseModel):
     user_id: int = Field(alias="userId")
     username: str
     display_name: str = Field(alias="displayName")
+    avatar_url: str = Field("", alias="avatarUrl")
     home_country: str = Field("", alias="homeCountry")
     home_currency: str = Field("USD", alias="homeCurrency")
     profile_theme: str = Field("dark-matter", alias="profileTheme")
@@ -211,6 +214,7 @@ class ProfileSearchResult(BaseModel):
     user_id: int = Field(alias="userId")
     username: str
     display_name: str = Field(alias="displayName")
+    avatar_url: str = Field("", alias="avatarUrl")
     profile_theme: str = Field(alias="profileTheme")
     about_me: str = Field("", alias="aboutMe")
     is_friend: bool = Field(False, alias="isFriend")
@@ -240,6 +244,7 @@ class FriendOut(BaseModel):
     id: int
     username: str
     display_name: str = Field(alias="displayName")
+    avatar_url: str = Field("", alias="avatarUrl")
     person_id: int = Field(alias="personId")
     home_country: str = Field("", alias="homeCountry")
     home_currency: str = Field("USD", alias="homeCurrency")
@@ -341,6 +346,7 @@ class TripUpdate(BaseModel):
 class Trip(BaseModel):
     """Full trip object as returned by the API."""
     id: int
+    public_id: str = Field(alias="publicId")
     name: str
     color: str
     description: str = ""

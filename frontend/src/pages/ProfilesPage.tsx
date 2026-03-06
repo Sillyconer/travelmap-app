@@ -52,7 +52,7 @@ export const ProfilesPage = () => {
                 {results.map(profile => (
                     <Card key={profile.userId} className={styles.profileCard} interactive onClick={() => navigate(`/profiles/${profile.username}`)}>
                         <div className={styles.profileHead}>
-                            <Avatar seed={profile.username} name={profile.displayName} size={44} />
+                            <Avatar seed={profile.username} name={profile.displayName} imageUrl={profile.avatarUrl} size={44} />
                             <div>
                                 <h3 className={styles.name}>{profile.displayName}</h3>
                                 <p className={styles.username}>@{profile.username}</p>

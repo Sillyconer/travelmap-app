@@ -21,9 +21,10 @@ export const AlbumDetailPage = () => {
 
     useEffect(() => {
         const loadTrip = async () => {
-            if (trip && trip.id === Number(id)) return;
+            if (!id) return;
+            if (trip && trip.publicId === id) return;
 
-            const localTrip = trips.find((t: Trip) => t.id === Number(id));
+            const localTrip = trips.find((t: Trip) => t.publicId === id);
             if (localTrip && localTrip.places) {
                 setTrip(localTrip);
                 setIsLoading(false);
@@ -31,7 +32,7 @@ export const AlbumDetailPage = () => {
             }
 
             try {
-                const freshData = await api.getTrip(Number(id));
+                const freshData = await api.getTripByPublicId(id);
                 setTrip(freshData);
                 updateTrip(freshData);
             } catch (err) {
@@ -42,7 +43,7 @@ export const AlbumDetailPage = () => {
             }
         };
 
-        if (id) loadTrip();
+        loadTrip();
     }, [id, trips, navigate, updateTrip, trip]);
 
     // Group photos by Place, and a group for "Unlocated"
@@ -143,7 +144,7 @@ export const AlbumDetailPage = () => {
                 {trip.photos.length === 0 ? (
                     <div className={styles.emptyState}>
                         <p>No photos have been uploaded to this trip yet.</p>
-                        <Button onClick={() => navigate(`/trips/${trip.id}`)}>
+                        <Button onClick={() => navigate(`/trips/${trip.publicId}`)}>
                             {trip.accessRole === 'viewer' ? 'Open Trip Details' : 'Go to Trip Details to Upload'}
                         </Button>
                     </div>

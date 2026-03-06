@@ -219,7 +219,7 @@ async def test_trip_member_roles_affect_edit_permissions():
         )
         assert invited.status_code == 200
 
-        member_trip = await member_client.get(f"/api/trips/{trip_id}")
+        member_trip = await member_client.get(f"/api/trips/{trip.json()['publicId']}")
         assert member_trip.status_code == 200
         assert member_trip.json()["accessRole"] == "viewer"
 

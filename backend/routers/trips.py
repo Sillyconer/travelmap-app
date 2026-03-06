@@ -21,13 +21,13 @@ async def list_trips(current_user: UserOut = Depends(get_current_user)):
     return await store.get_trips(current_user.id)
 
 
-@router.get("/{trip_id}", response_model=Trip)
-async def get_trip(trip_id: int, current_user: UserOut = Depends(get_current_user)):
+@router.get("/{trip_public_id}", response_model=Trip)
+async def get_trip(trip_public_id: str, current_user: UserOut = Depends(get_current_user)):
     """Get a single trip by ID."""
     store = get_store()
-    trip = await store.get_trip(trip_id, current_user.id)
+    trip = await store.get_trip_by_public_id(trip_public_id, current_user.id)
     if not trip:
-        raise HTTPException(404, f"Trip {trip_id} not found")
+        raise HTTPException(404, "Trip not found")
     return trip
 
 

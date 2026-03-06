@@ -104,7 +104,7 @@ async function fetchBlob(endpoint: string): Promise<Blob> {
 
 // ── Trips ──
 export const getTrips = () => fetcher<Trip[]>('/trips');
-export const getTrip = (id: number) => fetcher<Trip>(`/trips/${id}`);
+export const getTripByPublicId = (publicId: string) => fetcher<Trip>(`/trips/${encodeURIComponent(publicId)}`);
 export const createTrip = (data: TripCreate) => fetcher<Trip>('/trips', { method: 'POST', body: JSON.stringify(data) });
 export const updateTrip = (id: number, data: TripUpdate) => fetcher<Trip>(`/trips/${id}/update`, { method: 'POST', body: JSON.stringify(data) });
 export const deleteTrip = (id: number) => fetcher<{ ok: boolean }>(`/trips/${id}`, { method: 'DELETE' });
@@ -221,6 +221,10 @@ export const getMyProfile = () => fetcher<Profile>('/profiles/me');
 export const getProfile = (username: string) => fetcher<Profile>(`/profiles/${encodeURIComponent(username)}`);
 export const updateMyProfile = (data: Partial<Pick<Profile, 'displayName' | 'homeCountry' | 'homeCurrency' | 'profileTheme' | 'aboutMe' | 'showWorldMap' | 'showFeaturedTrips' | 'showFavoritePhotos' | 'showFeaturedFriends'>>) =>
     fetcher<Profile>('/profiles/me', { method: 'PATCH', body: JSON.stringify(data) });
+export const uploadMyAvatar = (formData: FormData) =>
+    fetcher<Profile>('/profiles/me/avatar', { method: 'POST', body: formData });
+export const deleteMyAvatar = () =>
+    fetcher<Profile>('/profiles/me/avatar', { method: 'DELETE' });
 export const getProfileOptions = () => fetcher<{ trips: ProfileTrip[]; photos: ProfilePhoto[]; friends: ProfileFriend[]; themes: string[] }>('/profiles/me/options');
 export const setFeaturedTrips = (tripIds: number[]) =>
     fetcher<ProfileTrip[]>('/profiles/me/featured-trips', { method: 'PUT', body: JSON.stringify({ tripIds }) });

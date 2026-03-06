@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from config import HOST, PORT, PHOTOS_DIR, THUMBS_DIR
+from config import AVATARS_DIR, HOST, PORT, PHOTOS_DIR, THUMBS_DIR
 from store import Store
 from dependencies import set_store
 from routers import auth, comments, finance, itinerary, notifications, profiles, search, trips, places, photos, persons, sharing, social
@@ -80,6 +80,7 @@ app.mount("/photos", StaticFiles(directory=str(PHOTOS_DIR)), name="photos")
 # API-style paths used by stored photo URLs
 app.mount("/api/photos/thumb", StaticFiles(directory=str(THUMBS_DIR)), name="api-photo-thumbs")
 app.mount("/api/photos/raw", StaticFiles(directory=str(PHOTOS_DIR)), name="api-photo-raw")
+app.mount("/api/avatars", StaticFiles(directory=str(AVATARS_DIR)), name="api-avatars")
 
 # Serve the frontend build (production mode)
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"

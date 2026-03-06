@@ -176,6 +176,21 @@
     margin: 12px 0;
 }
 
+.avatarEditorRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.avatarUploadLabel {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 13px;
+}
+
 .pickers {
     display: grid;
     grid-template-columns: 1fr 2fr 1.5fr;

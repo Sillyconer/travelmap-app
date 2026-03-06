@@ -4,6 +4,7 @@ import styles from './Avatar.module.css';
 interface AvatarProps {
     seed: string;
     name: string;
+    imageUrl?: string;
     size?: number;
 }
 
@@ -18,13 +19,14 @@ const initialsFromName = (name: string): string => {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
-export const Avatar = ({ seed, name, size = 36 }: AvatarProps) => {
+export const Avatar = ({ seed, name, imageUrl, size = 36 }: AvatarProps) => {
     const [useFallback, setUseFallback] = useState(false);
     const initials = useMemo(() => initialsFromName(name), [name]);
-    const avatarUrl = useMemo(
+    const generatedAvatarUrl = useMemo(
         () => `https://api.dicebear.com/8.x/avataaars/svg?seed=${encodeURIComponent(seed || name)}&backgroundType=gradientLinear`,
         [seed, name],
     );
+    const avatarUrl = imageUrl || generatedAvatarUrl;
 
     return (
         <span className={styles.avatar} style={{ width: size, height: size }} aria-hidden="true">

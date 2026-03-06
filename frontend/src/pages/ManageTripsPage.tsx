@@ -113,7 +113,7 @@ export const ManageTripsPage = () => {
             <Card className={styles.tripCard} interactive>
                 <div className={styles.colorStrip} style={{ backgroundColor: trip.color }} />
                 <div className={styles.cardContent}>
-                    <div style={{ cursor: 'pointer', flex: 1 }} onClick={() => navigate(`/trips/${trip.id}`)}>
+                    <div style={{ cursor: 'pointer', flex: 1 }} onClick={() => navigate(`/trips/${trip.publicId}`)}>
                         <h3 className={styles.tripName}>{trip.name}</h3>
                         <div className={styles.stats}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={16} /> {trip.places?.length || 0} places</span>
