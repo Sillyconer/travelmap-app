@@ -57,12 +57,12 @@ const MAP_STYLE_SPECS: Record<MapStyle, StyleSpec> = {
         layers: [{ url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png' }],
     },
     'oceanic-deep': {
-        backgroundColor: '#081826',
+        backgroundColor: '#143552',
         attribution: CARTO_ATTRIBUTION,
         layers: [
             { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-base' },
-            { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-water', opacity: 0.72 },
-            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-labels', opacity: 0.5 },
+            { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-water', opacity: 0.96 },
+            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-labels', opacity: 0.58 },
         ],
     },
     'voyager-neo': {
@@ -70,8 +70,8 @@ const MAP_STYLE_SPECS: Record<MapStyle, StyleSpec> = {
         attribution: CARTO_ATTRIBUTION,
         layers: [
             { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-voyager-base' },
-            { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', className: 'tile-voyager-desert', opacity: 0.36 },
-            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-voyager-labels', opacity: 0.7 },
+            { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', className: 'tile-voyager-desert', opacity: 0.48 },
+            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-voyager-labels', opacity: 0.62 },
         ],
     },
     'pine-earth': {

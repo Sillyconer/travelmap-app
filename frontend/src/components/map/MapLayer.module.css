@@ -12,31 +12,31 @@
 }
 
 .map :global(.leaflet-tile.tile-oceanic-base) {
-    filter: saturate(1.55) hue-rotate(198deg) brightness(0.58) contrast(1.22);
+    filter: saturate(3.2) hue-rotate(215deg) brightness(0.9) contrast(1.32);
 }
 
 .map :global(.leaflet-tile.tile-oceanic-water) {
-    filter: saturate(2.7) hue-rotate(208deg) brightness(0.72) contrast(1.16);
-    mix-blend-mode: color-dodge;
+    filter: grayscale(1) contrast(1.55) brightness(0.9);
+    mix-blend-mode: luminosity;
 }
 
 .map :global(.leaflet-tile.tile-oceanic-labels) {
-    filter: saturate(0.45) brightness(1.08) contrast(0.92);
+    filter: saturate(0.15) brightness(1.25) contrast(1.05);
     mix-blend-mode: lighten;
 }
 
 .map :global(.leaflet-tile.tile-voyager-base) {
-    filter: saturate(2.35) hue-rotate(244deg) brightness(0.7) contrast(1.2);
+    filter: saturate(2.8) hue-rotate(248deg) brightness(0.5) contrast(1.42);
     mix-blend-mode: multiply;
 }
 
 .map :global(.leaflet-tile.tile-voyager-desert) {
-    filter: saturate(2.4) hue-rotate(332deg) brightness(0.78) contrast(1.3);
-    mix-blend-mode: hard-light;
+    filter: saturate(2.9) hue-rotate(338deg) brightness(0.66) contrast(1.45);
+    mix-blend-mode: color-dodge;
 }
 
 .map :global(.leaflet-tile.tile-voyager-labels) {
-    filter: saturate(0.55) brightness(0.82) contrast(1.18);
+    filter: saturate(0.35) brightness(0.76) contrast(1.25);
 }
 
 .map :global(.leaflet-tile.tile-pine-base) {
