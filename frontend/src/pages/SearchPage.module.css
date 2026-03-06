@@ -18,6 +18,45 @@
     gap: 12px;
 }
 
+.recentWrap {
+    display: grid;
+    gap: 8px;
+}
+
+.recentList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.recentChip {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 999px;
+    background: var(--md-sys-color-surface-container-low);
+    color: var(--md-sys-color-on-surface);
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.quickList {
+    display: grid;
+    gap: 6px;
+}
+
+.quickItem {
+    text-decoration: none;
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container-low);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+
+.quickItemActive {
+    border-color: var(--md-sys-color-primary);
+    background: color-mix(in srgb, var(--md-sys-color-primary-container) 45%, var(--md-sys-color-surface-container-low));
+}
+
 .list {
     display: grid;
     gap: 8px;

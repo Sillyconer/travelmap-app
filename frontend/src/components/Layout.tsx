@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Navigation } from './ui/Navigation';
 import { SnackbarProvider } from './ui/Snackbar';
@@ -13,11 +13,34 @@ import styles from './Layout.module.css';
  */
 export const Layout = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const uiTheme = useSettingsStore(s => s.uiTheme);
 
     useEffect(() => {
         document.documentElement.dataset.theme = uiTheme;
     }, [uiTheme]);
+
+    useEffect(() => {
+        const handleGlobalSearchShortcut = (event: KeyboardEvent) => {
+            const isSearchShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+            if (!isSearchShortcut) {
+                return;
+            }
+            const target = event.target as HTMLElement | null;
+            const tagName = target?.tagName?.toLowerCase() ?? '';
+            if (target?.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
+                return;
+            }
+
+            event.preventDefault();
+            navigate('/search?focus=1');
+        };
+
+        window.addEventListener('keydown', handleGlobalSearchShortcut);
+        return () => {
+            window.removeEventListener('keydown', handleGlobalSearchShortcut);
+        };
+    }, [navigate]);
 
     return (
         <div className={styles.layout}>
