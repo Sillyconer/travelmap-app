@@ -57,12 +57,12 @@ const MAP_STYLE_SPECS: Record<MapStyle, StyleSpec> = {
         layers: [{ url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png' }],
     },
     'oceanic-deep': {
-        backgroundColor: '#143552',
+        backgroundColor: '#5f7280',
         attribution: CARTO_ATTRIBUTION,
         layers: [
-            { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-base' },
-            { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-water', opacity: 0.96 },
-            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-labels', opacity: 0.58 },
+            { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-base' },
+            { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-water', opacity: 0.88 },
+            { url: 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-labels', opacity: 0.78 },
         ],
     },
     'voyager-neo': {

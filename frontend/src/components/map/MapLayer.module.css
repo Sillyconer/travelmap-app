@@ -12,17 +12,18 @@
 }
 
 .map :global(.leaflet-tile.tile-oceanic-base) {
-    filter: saturate(3.2) hue-rotate(215deg) brightness(0.9) contrast(1.32);
+    filter: saturate(4) hue-rotate(178deg) brightness(0.84) contrast(1.12);
+    mix-blend-mode: multiply;
 }
 
 .map :global(.leaflet-tile.tile-oceanic-water) {
-    filter: grayscale(1) contrast(1.55) brightness(0.9);
-    mix-blend-mode: luminosity;
+    filter: grayscale(1) brightness(0.92) contrast(1.18);
+    mix-blend-mode: color;
 }
 
 .map :global(.leaflet-tile.tile-oceanic-labels) {
-    filter: saturate(0.15) brightness(1.25) contrast(1.05);
-    mix-blend-mode: lighten;
+    filter: grayscale(1) brightness(0.6) contrast(1.25);
+    mix-blend-mode: multiply;
 }
 
 .map :global(.leaflet-tile.tile-voyager-base) {
