@@ -81,8 +81,10 @@ class NotificationOut(BaseModel):
     title: str
     message: str
     payload: dict = Field(default_factory=dict)
+    occurrence_count: int = Field(1, alias="occurrenceCount")
     is_read: bool = Field(alias="isRead")
     created_at: str = Field(alias="createdAt")
+    updated_at: str = Field(alias="updatedAt")
 
     model_config = {"populate_by_name": True}
 

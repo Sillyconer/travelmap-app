@@ -154,10 +154,13 @@ CREATE TABLE IF NOT EXISTS notifications (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type        TEXT    NOT NULL,
+    group_key   TEXT    NOT NULL DEFAULT '',
     title       TEXT    NOT NULL,
     message     TEXT    NOT NULL,
     payload     TEXT    NOT NULL DEFAULT '{}',
+    occurrence_count INTEGER NOT NULL DEFAULT 1,
     is_read     INTEGER NOT NULL DEFAULT 0,
+    updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -278,11 +281,17 @@ class Store:
         await self._ensure_column("users", "show_featured_trips", "INTEGER NOT NULL DEFAULT 1")
         await self._ensure_column("users", "show_favorite_photos", "INTEGER NOT NULL DEFAULT 1")
         await self._ensure_column("users", "show_featured_friends", "INTEGER NOT NULL DEFAULT 1")
+        await self._ensure_column("notifications", "group_key", "TEXT NOT NULL DEFAULT ''")
+        await self._ensure_column("notifications", "occurrence_count", "INTEGER NOT NULL DEFAULT 1")
+        await self._ensure_column("notifications", "updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))")
 
         await self.db.execute("UPDATE trips SET user_id = 1 WHERE user_id IS NULL")
         await self.db.execute("UPDATE photos SET user_id = 1 WHERE user_id IS NULL")
         await self.db.execute("UPDATE persons SET user_id = 1 WHERE user_id IS NULL")
         await self.db.execute("UPDATE trips SET visibility = 'friends_only' WHERE visibility IS NULL OR visibility = ''")
+        await self.db.execute("UPDATE notifications SET group_key = '' WHERE group_key IS NULL")
+        await self.db.execute("UPDATE notifications SET occurrence_count = 1 WHERE occurrence_count IS NULL OR occurrence_count < 1")
+        await self.db.execute("UPDATE notifications SET updated_at = created_at WHERE updated_at IS NULL")
 
         await self.db.execute(
             """
@@ -320,10 +329,13 @@ class Store:
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 type        TEXT    NOT NULL,
+                group_key   TEXT    NOT NULL DEFAULT '',
                 title       TEXT    NOT NULL,
                 message     TEXT    NOT NULL,
                 payload     TEXT    NOT NULL DEFAULT '{}',
+                occurrence_count INTEGER NOT NULL DEFAULT 1,
                 is_read     INTEGER NOT NULL DEFAULT 0,
+                updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
                 created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
             )
             """
@@ -1407,16 +1419,55 @@ class Store:
         title: str,
         message: str,
         payload: dict | None = None,
+        group_key: str | None = None,
         *,
+        aggregate: bool = True,
         commit: bool = True,
     ) -> int:
-        payload_json = json.dumps(payload or {}, separators=(",", ":"))
+        payload_obj = payload or {}
+        payload_json = json.dumps(payload_obj, separators=(",", ":"))
+        resolved_group_key = (group_key or "").strip()
+        if not resolved_group_key and aggregate and notification_type in {"photo_commented", "comment_mention"}:
+            entity_type = str(payload_obj.get("entityType") or "")
+            entity_id = str(payload_obj.get("entityId") or "")
+            if entity_type and entity_id:
+                resolved_group_key = f"{notification_type}:{entity_type}:{entity_id}"
+
+        if aggregate and resolved_group_key:
+            async with self.db.execute(
+                """
+                SELECT id
+                FROM notifications
+                WHERE user_id = ? AND type = ? AND group_key = ? AND is_read = 0
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (user_id, notification_type, resolved_group_key),
+            ) as cursor:
+                existing = await cursor.fetchone()
+            if existing:
+                await self.db.execute(
+                    """
+                    UPDATE notifications
+                    SET title = ?,
+                        message = ?,
+                        payload = ?,
+                        occurrence_count = occurrence_count + 1,
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                    """,
+                    (title, message, payload_json, int(existing["id"])),
+                )
+                if commit:
+                    await self.db.commit()
+                return int(existing["id"])
+
         cursor = await self.db.execute(
             """
-            INSERT INTO notifications (user_id, type, title, message, payload, is_read)
-            VALUES (?, ?, ?, ?, ?, 0)
+            INSERT INTO notifications (user_id, type, group_key, title, message, payload, occurrence_count, is_read, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 1, 0, datetime('now'))
             """,
-            (user_id, notification_type, title, message, payload_json),
+            (user_id, notification_type, resolved_group_key, title, message, payload_json),
         )
         if commit:
             await self.db.commit()
@@ -1435,10 +1486,10 @@ class Store:
         where_clause = "WHERE user_id = ?" if not unread_only else "WHERE user_id = ? AND is_read = 0"
         rows = await self.db.execute_fetchall(
             f"""
-            SELECT id, type, title, message, payload, is_read, created_at
+            SELECT id, type, title, message, payload, occurrence_count, is_read, created_at, updated_at
             FROM notifications
             {where_clause}
-            ORDER BY id DESC
+            ORDER BY datetime(updated_at) DESC, id DESC
             LIMIT ? OFFSET ?
             """,
             (user_id, safe_limit, safe_offset),
@@ -1458,8 +1509,10 @@ class Store:
                     title=row["title"],
                     message=row["message"],
                     payload=payload,
-                    isRead=bool(row["is_read"]),
-                    createdAt=row["created_at"],
+                    occurrence_count=int(row["occurrence_count"] or 1),
+                    is_read=bool(row["is_read"]),
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"] or row["created_at"],
                 )
             )
         return result

@@ -7,9 +7,9 @@ import * as api from '../api/client';
 import type { NotificationItem } from '../types/models';
 import styles from './NotificationsPage.module.css';
 
-const toTime = (createdAt: string) => {
-    const date = new Date(createdAt.endsWith('Z') ? createdAt : `${createdAt}Z`);
-    return Number.isNaN(date.getTime()) ? createdAt : date.toLocaleString();
+const toTime = (value: string) => {
+    const date = new Date(value.endsWith('Z') ? value : `${value}Z`);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 };
 
 export const NotificationsPage = () => {
@@ -142,10 +142,12 @@ export const NotificationsPage = () => {
                                     <h3>{item.title}</h3>
                                     <p>{item.message}</p>
                                 </div>
-                                <span className={styles.date}>{toTime(item.createdAt)}</span>
+                                <span className={styles.date}>{toTime(item.updatedAt || item.createdAt)}</span>
                             </div>
                             <div className={styles.itemFoot}>
-                                <span className={styles.type}>{item.type}</span>
+                                <span className={styles.type}>
+                                    {item.type}{item.occurrenceCount > 1 ? ` · x${item.occurrenceCount}` : ''}
+                                </span>
                                 <div className={styles.inlineActions}>
                                     <Button onClick={() => openNotificationTarget(item)} disabled={isSubmitting}>Open</Button>
                                     {!item.isRead && (

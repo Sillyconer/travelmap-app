@@ -64,8 +64,10 @@ export interface NotificationItem {
     title: string;
     message: string;
     payload: Record<string, unknown>;
+    occurrenceCount: number;
     isRead: boolean;
     createdAt: string;
+    updatedAt: string;
 }
 
 export interface SearchTripResult {

@@ -519,14 +519,22 @@ async def test_photo_comment_notification_and_counts_endpoint():
         )
         assert comment.status_code == 201
 
+        second_comment = await commenter_client.post(
+            "/api/comments",
+            json={"entityType": "photo", "entityId": photo_id, "body": "Another thought"},
+        )
+        assert second_comment.status_code == 201
+
         counts = owner_client.get(f"/api/comments/counts?entity_type=photo&entity_ids={photo_id}")
         counts_res = await counts
         assert counts_res.status_code == 200
-        assert counts_res.json().get(str(photo_id)) == 1
+        assert counts_res.json().get(str(photo_id)) == 2
 
         notifications = await owner_client.get("/api/notifications")
         assert notifications.status_code == 200
-        assert any(n["type"] == "photo_commented" for n in notifications.json())
+        photo_notifications = [n for n in notifications.json() if n["type"] == "photo_commented"]
+        assert len(photo_notifications) == 1
+        assert photo_notifications[0]["occurrenceCount"] == 2
 
 
 @pytest.mark.asyncio
