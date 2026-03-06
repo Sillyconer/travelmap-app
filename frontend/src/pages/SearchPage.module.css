@@ -57,6 +57,13 @@
     background: color-mix(in srgb, var(--md-sys-color-primary-container) 45%, var(--md-sys-color-surface-container-low));
 }
 
+.match {
+    background: color-mix(in srgb, var(--md-sys-color-primary-container) 65%, transparent);
+    color: var(--md-sys-color-on-surface);
+    border-radius: 4px;
+    padding: 0 1px;
+}
+
 .list {
     display: grid;
     gap: 8px;

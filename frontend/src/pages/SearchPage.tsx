@@ -14,6 +14,8 @@ const EMPTY_RESULTS: UnifiedSearchResults = {
     profiles: [],
 };
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const SearchPage = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -35,6 +37,17 @@ export const SearchPage = () => {
             setSearchParams(nextParams, { replace: true });
         }
     }, [query, searchParams, setSearchParams]);
+
+    useEffect(() => {
+        const trimmed = query.trim();
+        const nextParams = new URLSearchParams(searchParams);
+        if (trimmed) {
+            nextParams.set('q', trimmed);
+        } else {
+            nextParams.delete('q');
+        }
+        setSearchParams(nextParams, { replace: true });
+    }, [query]);
 
     useEffect(() => {
         const trimmed = query.trim();
@@ -93,6 +106,16 @@ export const SearchPage = () => {
     }, [query]);
 
     const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            if (query.trim()) {
+                setQuery('');
+                setResults(EMPTY_RESULTS);
+            } else {
+                inputRef.current?.blur();
+            }
+            return;
+        }
         if (quickResults.length === 0) {
             return;
         }
@@ -109,6 +132,22 @@ export const SearchPage = () => {
                 navigate(target.route);
             }
         }
+    };
+
+    const highlightText = (text: string) => {
+        const term = query.trim();
+        if (!term) {
+            return text;
+        }
+        const regex = new RegExp(`(${escapeRegExp(term)})`, 'ig');
+        const parts = text.split(regex);
+        return (
+            <>
+                {parts.map((part, index) => (
+                    index % 2 === 1 ? <mark key={`mark-${index}`} className={styles.match}>{part}</mark> : <span key={`txt-${index}`}>{part}</span>
+                ))}
+            </>
+        );
     };
 
     return (
@@ -155,7 +194,7 @@ export const SearchPage = () => {
                                 to={item.route}
                                 className={`${styles.quickItem} ${index === activeIndex ? styles.quickItemActive : ''}`}
                             >
-                                {item.label}
+                                {highlightText(item.label)}
                             </Link>
                         ))}
                     </div>
@@ -170,7 +209,7 @@ export const SearchPage = () => {
                             {results.trips.map(item => (
                                 <Link key={`trip-${item.id}`} to={item.route} className={styles.item}>
                                     <span className={styles.dot} style={{ backgroundColor: item.color }} />
-                                    {item.name}
+                                    {highlightText(item.name)}
                                 </Link>
                             ))}
                         </div>
@@ -183,7 +222,7 @@ export const SearchPage = () => {
                         <div className={styles.list}>
                             {results.places.map(item => (
                                 <Link key={`place-${item.id}`} to={item.route} className={styles.item}>
-                                    <strong>{item.name}</strong>
+                                    <strong>{highlightText(item.name)}</strong>
                                     <small>{item.tripName}</small>
                                 </Link>
                             ))}
@@ -197,7 +236,7 @@ export const SearchPage = () => {
                         <div className={styles.list}>
                             {results.photos.map(item => (
                                 <Link key={`photo-${item.id}`} to={item.route} className={styles.item}>
-                                    <span>{item.name}</span>
+                                    <span>{highlightText(item.name)}</span>
                                     <small>{item.tripName}</small>
                                 </Link>
                             ))}
@@ -211,8 +250,8 @@ export const SearchPage = () => {
                         <div className={styles.list}>
                             {results.profiles.map(item => (
                                 <Link key={`profile-${item.id}`} to={item.route} className={styles.item}>
-                                    <span>{item.displayName}</span>
-                                    <small>@{item.username}{item.isFriend ? ' · friend' : ''}</small>
+                                    <span>{highlightText(item.displayName)}</span>
+                                    <small>@{highlightText(item.username)}{item.isFriend ? ' · friend' : ''}</small>
                                 </Link>
                             ))}
                         </div>

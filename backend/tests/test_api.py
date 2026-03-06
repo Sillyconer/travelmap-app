@@ -265,6 +265,26 @@ async def test_unified_search_returns_grouped_results(authed_client: AsyncClient
 
 
 @pytest.mark.asyncio
+async def test_unified_search_prefers_exact_trip_match_first(authed_client: AsyncClient):
+    first = await authed_client.post(
+        "/api/trips",
+        json={"name": "Tokyo", "color": "#1188EE", "visibility": "friends_only"},
+    )
+    second = await authed_client.post(
+        "/api/trips",
+        json={"name": "Tokyo Adventure", "color": "#22BB99", "visibility": "friends_only"},
+    )
+    assert first.status_code == 201
+    assert second.status_code == 201
+
+    search = await authed_client.get("/api/search?q=tokyo")
+    assert search.status_code == 200
+    trips = search.json()["trips"]
+    assert len(trips) >= 2
+    assert trips[0]["name"] == "Tokyo"
+
+
+@pytest.mark.asyncio
 async def test_login_rate_limit_blocks_excessive_attempts():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
         register = await client.post(

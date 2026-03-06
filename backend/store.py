@@ -2105,61 +2105,83 @@ class Store:
         ]
 
     async def unified_search(self, user_id: int, query: str, limit: int = 8) -> dict:
-        term = f"%{query.strip()}%"
+        clean_query = query.strip()
+        term = f"%{clean_query}%"
+        prefix_term = f"{clean_query}%"
         safe_limit = max(1, min(limit, 25))
 
         trip_rows = await self.db.execute_fetchall(
             """
-            SELECT DISTINCT t.id, t.name, t.color
+            SELECT DISTINCT t.id, t.name, t.color,
+                   CASE
+                     WHEN lower(t.name) = lower(?) THEN 0
+                     WHEN lower(t.name) LIKE lower(?) THEN 1
+                     ELSE 2
+                   END AS rank
             FROM trips t
             LEFT JOIN trip_members tm ON tm.trip_id = t.id
             WHERE (t.user_id = ? OR tm.user_id = ?)
               AND t.name LIKE ?
-            ORDER BY t.id DESC
+            ORDER BY rank ASC, t.id DESC
             LIMIT ?
             """,
-            (user_id, user_id, term, safe_limit),
+            (clean_query, prefix_term, user_id, user_id, term, safe_limit),
         )
 
         place_rows = await self.db.execute_fetchall(
             """
-            SELECT p.id, p.name, p.note, p.trip_id, t.name AS trip_name
+            SELECT p.id, p.name, p.note, p.trip_id, t.name AS trip_name,
+                   CASE
+                     WHEN lower(p.name) = lower(?) THEN 0
+                     WHEN lower(p.name) LIKE lower(?) THEN 1
+                     ELSE 2
+                   END AS rank
             FROM places p
             JOIN trips t ON t.id = p.trip_id
             LEFT JOIN trip_members tm ON tm.trip_id = t.id AND tm.user_id = ?
             WHERE (t.user_id = ? OR tm.user_id = ?)
               AND (p.name LIKE ? OR p.note LIKE ?)
-            ORDER BY p.id DESC
+            ORDER BY rank ASC, p.id DESC
             LIMIT ?
             """,
-            (user_id, user_id, user_id, term, term, safe_limit),
+            (clean_query, prefix_term, user_id, user_id, user_id, term, term, safe_limit),
         )
 
         photo_rows = await self.db.execute_fetchall(
             """
-            SELECT p.id, p.name, p.thumb_url, p.trip_id, t.name AS trip_name
+            SELECT p.id, p.name, p.thumb_url, p.trip_id, t.name AS trip_name,
+                   CASE
+                     WHEN lower(p.name) = lower(?) THEN 0
+                     WHEN lower(p.name) LIKE lower(?) THEN 1
+                     ELSE 2
+                   END AS rank
             FROM photos p
             LEFT JOIN trips t ON t.id = p.trip_id
             WHERE p.user_id = ?
               AND p.name LIKE ?
-            ORDER BY p.id DESC
+            ORDER BY rank ASC, p.id DESC
             LIMIT ?
             """,
-            (user_id, term, safe_limit),
+            (clean_query, prefix_term, user_id, term, safe_limit),
         )
 
         profile_rows = await self.db.execute_fetchall(
             """
             SELECT u.id, u.username, u.display_name,
-                   CASE WHEN f.user_id IS NULL THEN 0 ELSE 1 END AS is_friend
+                   CASE WHEN f.user_id IS NULL THEN 0 ELSE 1 END AS is_friend,
+                   CASE
+                     WHEN lower(u.username) = lower(?) OR lower(u.display_name) = lower(?) THEN 0
+                     WHEN lower(u.username) LIKE lower(?) OR lower(u.display_name) LIKE lower(?) THEN 1
+                     ELSE 2
+                   END AS rank
             FROM users u
             LEFT JOIN friends f ON f.user_id = ? AND f.friend_user_id = u.id
             WHERE u.id != ?
               AND (u.username LIKE ? OR u.display_name LIKE ?)
-            ORDER BY is_friend DESC, u.display_name ASC
+            ORDER BY is_friend DESC, rank ASC, u.display_name ASC
             LIMIT ?
             """,
-            (user_id, user_id, term, term, safe_limit),
+            (clean_query, clean_query, prefix_term, prefix_term, user_id, user_id, term, term, safe_limit),
         )
 
         return {
