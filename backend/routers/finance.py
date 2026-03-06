@@ -73,17 +73,26 @@ async def create_expense(trip_id: int, data: ExpenseRequest, current_user: UserO
     if split_mode == "equal":
         equal_share = conversion["converted"] / len(participant_ids)
         split_rows = [(uid, equal_share) for uid in participant_ids]
-    elif split_mode == "custom":
+    elif split_mode in {"custom", "custom_amount"}:
         custom = data.custom_shares or {}
-        weighted_users = [(uid, float(custom.get(str(uid), 0.0))) for uid in participant_ids]
-        weighted_users = [(uid, weight) for uid, weight in weighted_users if weight > 0]
-        if not weighted_users:
-            raise HTTPException(status_code=400, detail="Custom split requires positive shares")
-        total_weight = sum(weight for _, weight in weighted_users)
-        split_rows = [
-            (uid, conversion["converted"] * (weight / total_weight))
-            for uid, weight in weighted_users
-        ]
+        amounts_in_expense_currency = [(uid, float(custom.get(str(uid), 0.0))) for uid in participant_ids]
+        if any(amount < 0 for _, amount in amounts_in_expense_currency):
+            raise HTTPException(status_code=400, detail="Custom split amounts must be zero or positive")
+        if any(amount == 0 for _, amount in amounts_in_expense_currency):
+            raise HTTPException(status_code=400, detail="Each selected participant needs an amount")
+
+        split_total = round(sum(amount for _, amount in amounts_in_expense_currency), 2)
+        target_total = round(float(data.amount), 2)
+        if abs(split_total - target_total) > 0.01:
+            raise HTTPException(status_code=400, detail="Custom split amounts must add up to expense amount")
+
+        split_rows = [(uid, round(amount * conversion["rate"], 2)) for uid, amount in amounts_in_expense_currency]
+        converted_sum = round(sum(amount for _, amount in split_rows), 2)
+        diff = round(conversion["converted"] - converted_sum, 2)
+        if split_rows and abs(diff) > 0:
+            largest_idx = max(range(len(split_rows)), key=lambda idx: split_rows[idx][1])
+            uid, amount_home = split_rows[largest_idx]
+            split_rows[largest_idx] = (uid, round(amount_home + diff, 2))
     else:
         raise HTTPException(status_code=400, detail="Unsupported split mode")
 

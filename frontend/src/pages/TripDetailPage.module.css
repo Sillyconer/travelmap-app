@@ -331,6 +331,12 @@
     margin: 0;
 }
 
+.warnText {
+    color: var(--md-sys-color-error);
+    font-size: var(--md-sys-typescale-body-small-size);
+    margin: 0;
+}
+
 .commentForm {
     display: flex;
     align-items: end;

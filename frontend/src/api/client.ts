@@ -228,7 +228,7 @@ export const createExpense = (
         currency: string;
         placeId?: number;
         note?: string;
-        splitMode?: 'equal' | 'custom';
+        splitMode?: 'equal' | 'custom_amount';
         participantUserIds?: number[];
         customShares?: Record<string, number>;
     },

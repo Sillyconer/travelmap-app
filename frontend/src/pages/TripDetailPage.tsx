@@ -66,7 +66,7 @@ export const TripDetailPage = () => {
     const [expenseAmount, setExpenseAmount] = useState('');
     const [expenseCurrency, setExpenseCurrency] = useState('USD');
     const [expenseNote, setExpenseNote] = useState('');
-    const [expenseSplitMode, setExpenseSplitMode] = useState<'equal' | 'custom'>('equal');
+    const [expenseSplitMode, setExpenseSplitMode] = useState<'equal' | 'custom_amount'>('equal');
     const [expenseParticipantIds, setExpenseParticipantIds] = useState<number[]>([]);
     const [expenseCustomShares, setExpenseCustomShares] = useState<Record<number, string>>({});
     const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
@@ -292,7 +292,7 @@ export const TripDetailPage = () => {
             const participantIds = expenseParticipantIds.length > 0
                 ? expenseParticipantIds
                 : tripExpenseParticipants.map(p => p.id);
-            const customSharesPayload = expenseSplitMode === 'custom'
+            const customSharesPayload = expenseSplitMode === 'custom_amount'
                 ? Object.fromEntries(
                     participantIds.map(id => [String(id), Number(expenseCustomShares[id] || 0)]),
                 )
@@ -396,6 +396,17 @@ export const TripDetailPage = () => {
             return [...prev, participantId];
         });
     };
+
+    const expenseAmountNumber = Number(expenseAmount || 0);
+    const customSplitTotal = expenseParticipantIds.reduce((sum, participantId) => {
+        return sum + Number(expenseCustomShares[participantId] || 0);
+    }, 0);
+    const customSplitRemaining = Number((expenseAmountNumber - customSplitTotal).toFixed(2));
+    const canSubmitExpense =
+        canEdit
+        && expenseAmountNumber > 0
+        && expenseParticipantIds.length > 0
+        && (expenseSplitMode === 'equal' || Math.abs(customSplitRemaining) <= 0.01);
     const invitedFriendIds = new Set(members.map(m => m.id));
     const invitables = friends.filter(f => !invitedFriendIds.has(f.id));
 
@@ -592,11 +603,11 @@ export const TripDetailPage = () => {
                             <div className={styles.coordRow}>
                                 <select
                                     value={expenseSplitMode}
-                                    onChange={(e) => setExpenseSplitMode(e.target.value as 'equal' | 'custom')}
+                                    onChange={(e) => setExpenseSplitMode(e.target.value as 'equal' | 'custom_amount')}
                                     className={styles.select}
                                 >
                                     <option value="equal">Split equally</option>
-                                    <option value="custom">Custom split</option>
+                                    <option value="custom_amount">Exact amounts</option>
                                 </select>
                             </div>
                             <div className={styles.expenseParticipants}>
@@ -614,7 +625,7 @@ export const TripDetailPage = () => {
                                     );
                                 })}
                             </div>
-                            {expenseSplitMode === 'custom' && (
+                            {expenseSplitMode === 'custom_amount' && (
                                 <div className={styles.customSplitGrid}>
                                     {expenseParticipantIds.map(participantId => {
                                         const participant = tripExpenseParticipants.find(p => p.id === participantId);
@@ -624,7 +635,7 @@ export const TripDetailPage = () => {
                                         return (
                                             <Input
                                                 key={`custom-share-${participant.id}`}
-                                                label={`${participant.name} share weight`}
+                                                label={`${participant.name} amount (${expenseCurrency})`}
                                                 type="number"
                                                 step="0.01"
                                                 min="0"
@@ -637,9 +648,12 @@ export const TripDetailPage = () => {
                                             />
                                         );
                                     })}
+                                    <p className={Math.abs(customSplitRemaining) <= 0.01 ? styles.helperText : styles.warnText}>
+                                        Remaining: {customSplitRemaining.toFixed(2)} {expenseCurrency}
+                                    </p>
                                 </div>
                             )}
-                            {canEdit && <Button size="sm" type="submit">Add Expense</Button>}
+                            {canEdit && <Button size="sm" type="submit" disabled={!canSubmitExpense}>Add Expense</Button>}
                         </form>
                         <div className={styles.expenseList}>
                             {expenses.slice(0, 5).map(exp => (

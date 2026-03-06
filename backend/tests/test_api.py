@@ -422,11 +422,11 @@ async def test_custom_expense_split_affects_settlement():
                 "amount": 80,
                 "currency": "USD",
                 "note": "Dinner",
-                "splitMode": "custom",
+                "splitMode": "custom_amount",
                 "participantUserIds": [owner_register.json()["user"]["id"], member_register.json()["user"]["id"]],
                 "customShares": {
-                    str(owner_register.json()["user"]["id"]): 1,
-                    str(member_register.json()["user"]["id"]): 3,
+                    str(owner_register.json()["user"]["id"]): 20,
+                    str(member_register.json()["user"]["id"]): 60,
                 },
             },
         )
@@ -442,6 +442,22 @@ async def test_custom_expense_split_affects_settlement():
         breakdown = payload["expenseBreakdowns"][0]
         assert breakdown["note"] == "Dinner"
         assert len(breakdown["shares"]) == 2
+
+        invalid_split = await owner_client.post(
+            f"/api/trips/{trip_id}/expenses",
+            json={
+                "amount": 50,
+                "currency": "USD",
+                "note": "Invalid",
+                "splitMode": "custom_amount",
+                "participantUserIds": [owner_register.json()["user"]["id"], member_register.json()["user"]["id"]],
+                "customShares": {
+                    str(owner_register.json()["user"]["id"]): 10,
+                    str(member_register.json()["user"]["id"]): 10,
+                },
+            },
+        )
+        assert invalid_split.status_code == 400
 
 
 @pytest.mark.asyncio
