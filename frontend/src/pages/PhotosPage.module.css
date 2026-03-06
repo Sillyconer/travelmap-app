@@ -167,6 +167,27 @@
     z-index: 2;
 }
 
+.commentBadge {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20, 24, 28, 0.75);
+    color: #fff;
+    z-index: 2;
+    cursor: pointer;
+}
+
+.commentBadge:hover {
+    background: rgba(20, 24, 28, 0.9);
+}
+
 .selectionOverlay {
     position: absolute;
     top: 6px;
@@ -233,4 +254,62 @@
     margin: 0;
     font-size: 12px;
     color: var(--md-sys-color-on-surface-variant);
+}
+
+.commentModalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.commentInput {
+    min-height: 82px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    border-radius: 8px;
+    padding: 10px;
+    resize: vertical;
+}
+
+.commentList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow: auto;
+}
+
+.commentItem {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.commentHead {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+}
+
+.commentHead small {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.commentItem p {
+    margin: 6px 0;
+}
+
+.commentActions {
+    display: flex;
+    gap: 8px;
+}
+
+.commentActions button {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container-low);
+    color: var(--md-sys-color-on-surface);
+    border-radius: 999px;
+    padding: 4px 8px;
+    cursor: pointer;
 }

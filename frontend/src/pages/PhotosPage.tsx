@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import * as api from '../api/client';
 import { Lightbox } from '../components/gallery/Lightbox';
-import { MdDownload, MdLocationOff, MdCheckCircle } from 'react-icons/md';
+import { MdDownload, MdLocationOff, MdCheckCircle, MdChatBubbleOutline, MdDeleteOutline } from 'react-icons/md';
 import { motion } from 'framer-motion';
 import { showSnackbar } from '../components/ui/Snackbar';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
 import styles from './PhotosPage.module.css';
-import type { LibraryPhoto, Trip } from '../types/models';
+import type { CommentItem, LibraryPhoto, Trip } from '../types/models';
 
 export const PhotosPage = () => {
     const [photos, setPhotos] = useState<LibraryPhoto[]>([]);
@@ -25,6 +25,12 @@ export const PhotosPage = () => {
     // Selection state
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+
+    const [isCommentOpen, setIsCommentOpen] = useState(false);
+    const [commentPhoto, setCommentPhoto] = useState<LibraryPhoto | null>(null);
+    const [comments, setComments] = useState<CommentItem[]>([]);
+    const [commentBody, setCommentBody] = useState('');
+    const [isCommentLoading, setIsCommentLoading] = useState(false);
 
     useEffect(() => {
         const loadPhotos = async () => {
@@ -125,6 +131,52 @@ export const PhotosPage = () => {
         // Clear selection after download
         setSelectedIds(new Set());
         setIsSelectionMode(false);
+    };
+
+    const openCommentModal = async (photo: LibraryPhoto) => {
+        setCommentPhoto(photo);
+        setIsCommentOpen(true);
+        setCommentBody('');
+        setIsCommentLoading(true);
+        try {
+            const list = await api.getComments('photo', photo.id);
+            setComments(list);
+        } catch (err: any) {
+            showSnackbar(`Failed to load comments: ${err.message}`);
+            setComments([]);
+        } finally {
+            setIsCommentLoading(false);
+        }
+    };
+
+    const handleAddPhotoComment = async () => {
+        if (!commentPhoto || !commentBody.trim()) return;
+        try {
+            const created = await api.createComment('photo', commentPhoto.id, commentBody.trim());
+            setComments(prev => [...prev, created]);
+            setCommentBody('');
+            showSnackbar('Comment posted');
+        } catch (err: any) {
+            showSnackbar(`Failed to post comment: ${err.message}`);
+        }
+    };
+
+    const handleDeletePhotoComment = async (commentId: number) => {
+        try {
+            await api.deleteComment(commentId);
+            setComments(prev => prev.filter(c => c.id !== commentId));
+        } catch (err: any) {
+            showSnackbar(`Failed to delete comment: ${err.message}`);
+        }
+    };
+
+    const handleTogglePhotoReaction = async (commentId: number, emoji: string) => {
+        try {
+            const reactions = await api.toggleCommentReaction(commentId, emoji);
+            setComments(prev => prev.map(c => (c.id === commentId ? { ...c, reactions } : c)));
+        } catch (err: any) {
+            showSnackbar(`Failed to react: ${err.message}`);
+        }
     };
 
     const handleUploadFromLibrary = async (files: FileList | null) => {
@@ -346,6 +398,19 @@ export const PhotosPage = () => {
                                                     <MdLocationOff />
                                                 </div>
                                             )}
+                                            {!isSelectionMode && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.commentBadge}
+                                                    title="Comments"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openCommentModal(photo);
+                                                    }}
+                                                >
+                                                    <MdChatBubbleOutline />
+                                                </button>
+                                            )}
                                             {isSelectionMode && (
                                                 <div className={styles.selectionOverlay}>
                                                     {isSelected && <MdCheckCircle className={styles.checkIcon} />}
@@ -401,6 +466,54 @@ export const PhotosPage = () => {
                         </select>
                     </label>
                     <p className={styles.assignInfo}>{assigningIds.length} photo(s) will be assigned.</p>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={isCommentOpen}
+                onClose={() => setIsCommentOpen(false)}
+                title={commentPhoto ? `Comments · ${commentPhoto.name}` : 'Comments'}
+                actions={
+                    <>
+                        <Button variant="text" onClick={() => setIsCommentOpen(false)}>Close</Button>
+                        <Button onClick={handleAddPhotoComment} disabled={!commentBody.trim()}>Post</Button>
+                    </>
+                }
+            >
+                <div className={styles.commentModalBody}>
+                    <textarea
+                        value={commentBody}
+                        onChange={(e) => setCommentBody(e.target.value)}
+                        className={styles.commentInput}
+                        placeholder="Add a comment"
+                        maxLength={1000}
+                    />
+                    <div className={styles.commentList}>
+                        {isCommentLoading && <p className={styles.assignInfo}>Loading comments...</p>}
+                        {!isCommentLoading && comments.length === 0 && <p className={styles.assignInfo}>No comments yet.</p>}
+                        {comments.map(comment => (
+                            <div key={comment.id} className={styles.commentItem}>
+                                <div className={styles.commentHead}>
+                                    <strong>{comment.displayName}</strong>
+                                    <small>@{comment.username}</small>
+                                </div>
+                                <p>{comment.body}</p>
+                                <div className={styles.commentActions}>
+                                    <button type="button" onClick={() => handleTogglePhotoReaction(comment.id, '👍')}>
+                                        👍 {comment.reactions.find(r => r.emoji === '👍')?.count || 0}
+                                    </button>
+                                    <button type="button" onClick={() => handleTogglePhotoReaction(comment.id, '❤️')}>
+                                        ❤️ {comment.reactions.find(r => r.emoji === '❤️')?.count || 0}
+                                    </button>
+                                    {comment.canDelete && (
+                                        <button type="button" onClick={() => handleDeletePhotoComment(comment.id)}>
+                                            <MdDeleteOutline />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </Modal>
         </div>
