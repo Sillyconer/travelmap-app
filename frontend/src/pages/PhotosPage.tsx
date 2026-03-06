@@ -35,6 +35,8 @@ export const PhotosPage = () => {
     const [isCommentLoading, setIsCommentLoading] = useState(false);
     const [commentCounts, setCommentCounts] = useState<Record<number, number>>({});
 
+    const assignableTrips = useMemo(() => trips.filter(trip => trip.accessRole !== 'viewer'), [trips]);
+
     useEffect(() => {
         const loadPhotos = async () => {
             try {
@@ -239,6 +241,10 @@ export const PhotosPage = () => {
     };
 
     const openAssignModal = () => {
+        if (assignableTrips.length === 0) {
+            showSnackbar('You do not have edit access to any trips yet');
+            return;
+        }
         const targetIds = selectedIds.size > 0 ? Array.from(selectedIds) : (lightboxIndex !== null ? [photos[lightboxIndex].id] : []);
         if (targetIds.length === 0) {
             showSnackbar('Select one or more photos first');
@@ -268,7 +274,7 @@ export const PhotosPage = () => {
         }
     };
 
-    const selectedTrip = trips.find(t => t.id === assignTripId);
+    const selectedAssignableTrip = assignableTrips.find(t => t.id === assignTripId);
 
     // Group photos by month/year (takenAt if available, otherwise "Unknown Date")
     const groupedPhotos = useMemo(() => {
@@ -323,7 +329,7 @@ export const PhotosPage = () => {
                             <button
                                 className={`${styles.btnBase} ${styles.assignBtn}`}
                                 onClick={openAssignModal}
-                                disabled={selectedIds.size === 0}
+                                disabled={selectedIds.size === 0 || assignableTrips.length === 0}
                             >
                                 Assign to Trip
                             </button>
@@ -357,7 +363,7 @@ export const PhotosPage = () => {
                             <button
                                 className={`${styles.btnBase} ${styles.assignBtn}`}
                                 onClick={openAssignModal}
-                                disabled={photos.length === 0}
+                                disabled={photos.length === 0 || assignableTrips.length === 0}
                             >
                                 Assign
                             </button>
@@ -487,16 +493,16 @@ export const PhotosPage = () => {
                         Trip
                         <select value={assignTripId ?? ''} onChange={(e) => setAssignTripId(e.target.value ? Number(e.target.value) : null)}>
                             <option value="">Select a trip</option>
-                            {trips.map(trip => (
+                            {assignableTrips.map(trip => (
                                 <option key={trip.id} value={trip.id}>{trip.name}</option>
                             ))}
                         </select>
                     </label>
                     <label>
                         Place (optional)
-                        <select value={assignPlaceId ?? ''} onChange={(e) => setAssignPlaceId(e.target.value ? Number(e.target.value) : null)} disabled={!selectedTrip}>
+                        <select value={assignPlaceId ?? ''} onChange={(e) => setAssignPlaceId(e.target.value ? Number(e.target.value) : null)} disabled={!selectedAssignableTrip}>
                             <option value="">No place</option>
-                            {selectedTrip?.places.map(place => (
+                            {selectedAssignableTrip?.places.map(place => (
                                 <option key={place.id} value={place.id}>{place.name}</option>
                             ))}
                         </select>
