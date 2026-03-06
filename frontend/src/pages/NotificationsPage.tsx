@@ -69,6 +69,15 @@ export const NotificationsPage = () => {
             return `/trips/${tripId}`;
         }
 
+        const entityType = payload.entityType;
+        const entityId = payload.entityId;
+        if (entityType === 'trip' && typeof entityId === 'number') {
+            return `/trips/${entityId}`;
+        }
+        if (entityType === 'photo') {
+            return '/photos';
+        }
+
         const username = payload.username;
         if (typeof username === 'string' && username.trim()) {
             return `/profiles/${username}`;
