@@ -8,6 +8,33 @@ import { TripPolylines } from './TripPolylines';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import styles from './MapLayer.module.css';
 
+const TILE_PROVIDERS = {
+    'dark-matter': {
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+    positron: {
+        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+    voyager: {
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+    'voyager-nolabels': {
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+    'osm-standard': {
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+    terrain: {
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+    },
+} as const;
+
 // Fix for default Leaflet icons in Webpack/Vite
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -38,6 +65,7 @@ export const MapLayer = () => {
         : trips;
 
     const visibleTrips = tripsAfterPersonFilter.filter(trip => visibleTripIds.has(trip.id));
+    const tileProvider = TILE_PROVIDERS[mapStyle] ?? TILE_PROVIDERS['dark-matter'];
 
     return (
         <div className={styles.mapWrapper}>
@@ -51,14 +79,8 @@ export const MapLayer = () => {
                 zoomControl={false}
             >
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                    url={
-                        mapStyle === 'dark-matter'
-                            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                            : mapStyle === 'positron'
-                                ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                                : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                    }
+                    attribution={tileProvider.attribution}
+                    url={tileProvider.url}
                 />
 
                 <TripPolylines trips={visibleTrips} />

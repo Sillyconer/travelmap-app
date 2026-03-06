@@ -2,12 +2,14 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { showSnackbar } from '../components/ui/Snackbar';
 import styles from './SettingsPage.module.css';
 import { MdMap, MdAttachMoney } from 'react-icons/md';
 import { useEffect, useMemo, useState } from 'react';
 import * as api from '../api/client';
 import type { CurrencyOption } from '../types/models';
 import { useNavigate } from 'react-router-dom';
+import type { MapStyle } from '../store/useSettingsStore';
 
 const UI_THEMES = [
     {
@@ -47,6 +49,23 @@ const UI_THEMES = [
         colors: ['#121A15', '#86C06C', '#D2B979'],
     },
 ] as const;
+
+const MAP_STYLE_OPTIONS: Array<{ id: MapStyle; label: string }> = [
+    { id: 'dark-matter', label: 'Dark Matter' },
+    { id: 'positron', label: 'Positron (Light)' },
+    { id: 'voyager', label: 'Voyager (Colorful)' },
+    { id: 'voyager-nolabels', label: 'Voyager No Labels' },
+    { id: 'osm-standard', label: 'OSM Standard' },
+    { id: 'terrain', label: 'Terrain (Topo)' },
+];
+
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+    US: 'USD', CA: 'CAD', MX: 'MXN', BR: 'BRL', AR: 'ARS',
+    GB: 'GBP', IE: 'EUR', FR: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', PT: 'EUR', NL: 'EUR', BE: 'EUR', AT: 'EUR', FI: 'EUR',
+    CH: 'CHF', NO: 'NOK', SE: 'SEK', DK: 'DKK', PL: 'PLN', CZ: 'CZK', HU: 'HUF', RO: 'RON',
+    JP: 'JPY', CN: 'CNY', IN: 'INR', KR: 'KRW', SG: 'SGD', HK: 'HKD', TH: 'THB', ID: 'IDR', MY: 'MYR', PH: 'PHP', VN: 'VND',
+    AU: 'AUD', NZ: 'NZD', ZA: 'ZAR', AE: 'AED', SA: 'SAR', TR: 'TRY',
+};
 
 type UiThemeId = (typeof UI_THEMES)[number]['id'];
 
@@ -88,7 +107,17 @@ export const SettingsPage = () => {
     };
 
     const handleHomeCountryBlur = async () => {
-        await updateProfile({ homeCountry });
+        const code = homeCountry.trim().toUpperCase();
+        const mappedCurrency = COUNTRY_TO_CURRENCY[code];
+        const supported = new Set((currencies.length > 0 ? currencies : [{ code: 'USD', name: 'US Dollar' }]).map(c => c.code));
+
+        if (mappedCurrency && supported.has(mappedCurrency)) {
+            setCurrency(mappedCurrency);
+            await updateProfile({ homeCountry: code, homeCurrency: mappedCurrency });
+            showSnackbar(`Home currency set to ${mappedCurrency} based on country ${code}`);
+        } else {
+            await updateProfile({ homeCountry: code });
+        }
     };
 
     return (
@@ -109,12 +138,12 @@ export const SettingsPage = () => {
                             </div>
                             <select
                                 value={mapStyle}
-                                onChange={(e) => setMapStyle(e.target.value as any)}
+                                onChange={(e) => setMapStyle(e.target.value as MapStyle)}
                                 className={styles.select}
                             >
-                                <option value="dark-matter">Dark Matter (Default)</option>
-                                <option value="positron">Positron (Light)</option>
-                                <option value="voyager">Voyager (Colorful)</option>
+                                {MAP_STYLE_OPTIONS.map(option => (
+                                    <option key={option.id} value={option.id}>{option.label}</option>
+                                ))}
                             </select>
                         </div>
                     </Card>

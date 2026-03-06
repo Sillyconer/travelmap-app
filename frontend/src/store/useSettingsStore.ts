@@ -1,13 +1,38 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type MapStyle =
+    | 'dark-matter'
+    | 'positron'
+    | 'voyager'
+    | 'voyager-nolabels'
+    | 'osm-standard'
+    | 'terrain';
+
+export type UiTheme =
+    | 'dark-matter'
+    | 'positron'
+    | 'voyager'
+    | 'oceanic'
+    | 'atlas-sand'
+    | 'pine-trail';
+
+const THEME_TO_MAP_STYLE: Record<UiTheme, MapStyle> = {
+    'dark-matter': 'dark-matter',
+    positron: 'positron',
+    voyager: 'voyager',
+    oceanic: 'voyager-nolabels',
+    'atlas-sand': 'terrain',
+    'pine-trail': 'osm-standard',
+};
+
 interface SettingsState {
     currency: string;
-    mapStyle: 'voyager' | 'positron' | 'dark-matter';
-    uiTheme: 'dark-matter' | 'positron' | 'voyager' | 'oceanic' | 'atlas-sand' | 'pine-trail';
+    mapStyle: MapStyle;
+    uiTheme: UiTheme;
     setCurrency: (currency: string) => void;
-    setMapStyle: (style: 'voyager' | 'positron' | 'dark-matter') => void;
-    setUiTheme: (theme: 'dark-matter' | 'positron' | 'voyager' | 'oceanic' | 'atlas-sand' | 'pine-trail') => void;
+    setMapStyle: (style: MapStyle) => void;
+    setUiTheme: (theme: UiTheme) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -20,7 +45,7 @@ export const useSettingsStore = create<SettingsState>()(
             setMapStyle: (mapStyle) => set({ mapStyle }),
             setUiTheme: (uiTheme) => {
                 document.documentElement.dataset.theme = uiTheme;
-                set({ uiTheme });
+                set({ uiTheme, mapStyle: THEME_TO_MAP_STYLE[uiTheme] });
             },
         }),
         {
