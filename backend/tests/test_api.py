@@ -331,3 +331,49 @@ async def test_trip_expense_settlement_summary(authed_client: AsyncClient):
     assert payload["total"] >= 60
     assert payload["perPerson"] >= 60
     assert len(payload["participants"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_comment_mentions_create_notification_for_mentioned_user():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as alice_client, AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as bob_client:
+        alice_register = await alice_client.post(
+            "/api/auth/register",
+            json={"username": "alice77", "displayName": "Alice", "password": "secret"},
+        )
+        bob_register = await bob_client.post(
+            "/api/auth/register",
+            json={"username": "bob77", "displayName": "Bob", "password": "secret"},
+        )
+        assert alice_register.status_code == 201
+        assert bob_register.status_code == 201
+
+        alice_client.headers.update({"Authorization": f"Bearer {alice_register.json()['token']}"})
+        bob_client.headers.update({"Authorization": f"Bearer {bob_register.json()['token']}"})
+
+        request = await bob_client.post("/api/social/friend-requests", json={"username": "alice77"})
+        assert request.status_code == 201
+        accepted = await alice_client.post(f"/api/social/friend-requests/{request.json()['id']}/accept")
+        assert accepted.status_code == 200
+
+        trip = await alice_client.post(
+            "/api/trips",
+            json={"name": "Mention Trip", "color": "#0099AA", "visibility": "friends_only"},
+        )
+        assert trip.status_code == 201
+        trip_id = trip.json()["id"]
+
+        invited = await alice_client.post(f"/api/trips/{trip_id}/members/{bob_register.json()['user']['id']}?role=viewer")
+        assert invited.status_code == 200
+
+        comment = await bob_client.post(
+            "/api/comments",
+            json={"entityType": "trip", "entityId": trip_id, "body": "Looks great @alice77"},
+        )
+        assert comment.status_code == 201
+
+        alice_notifications = await alice_client.get("/api/notifications")
+        assert alice_notifications.status_code == 200
+        mention_notifications = [n for n in alice_notifications.json() if n["type"] == "comment_mention"]
+        assert len(mention_notifications) >= 1

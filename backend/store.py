@@ -8,6 +8,7 @@ Uses aiosqlite for async SQLite access.
 from __future__ import annotations
 
 import json
+import re
 import aiosqlite
 from pathlib import Path
 
@@ -222,6 +223,7 @@ VALID_PROFILE_THEMES = {
 }
 
 VALID_TRIP_MEMBER_ROLES = {"viewer", "editor"}
+MENTION_RE = re.compile(r"@([A-Za-z0-9_]{3,32})")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1550,6 +1552,31 @@ class Store:
             (entity_type, data.entity_id, user_id, body),
         )
         comment_id = int(cursor.lastrowid or 0)
+
+        author = await self.get_user_by_id(user_id)
+        if author:
+            mention_usernames = {m.group(1).lower() for m in MENTION_RE.finditer(body)}
+            for username in mention_usernames:
+                mentioned_user = await self.get_user_by_username(username)
+                if not mentioned_user or mentioned_user.id == user_id:
+                    continue
+                if not await self._can_access_comment_entity(mentioned_user.id, entity_type, data.entity_id):
+                    continue
+                await self.create_notification(
+                    mentioned_user.id,
+                    "comment_mention",
+                    "You were mentioned",
+                    f"{author.display_name} mentioned you in a comment.",
+                    payload={
+                        "commentId": comment_id,
+                        "entityType": entity_type,
+                        "entityId": data.entity_id,
+                        "fromUserId": author.id,
+                        "fromUsername": author.username,
+                    },
+                    commit=False,
+                )
+
         await self.db.commit()
 
         comments = await self.list_comments(user_id, entity_type, data.entity_id, limit=200)
