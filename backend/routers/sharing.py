@@ -10,7 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from models import ShareLinkCreate, ShareLinkOut, UserOut
-from dependencies import get_current_user, get_store
+from dependencies import get_current_user, get_optional_user, get_store
 
 router = APIRouter(tags=["sharing"])
 
@@ -52,7 +52,7 @@ async def create_share_link(data: ShareLinkCreate, current_user: UserOut = Depen
 
 
 @router.get("/api/share/{token}")
-async def resolve_share_link(token: str):
+async def resolve_share_link(token: str, current_user: UserOut | None = Depends(get_optional_user)):
     """
     Resolve a share token and return the associated content.
 
@@ -80,11 +80,25 @@ async def resolve_share_link(token: str):
         }
 
     elif link.type == "album":
-        async with store.db.execute("SELECT user_id FROM trips WHERE id = ?", (link.trip_id,)) as cur:
+        if link.trip_id is None:
+            raise HTTPException(404, "The shared album no longer exists")
+        trip_id = int(link.trip_id)
+        async with store.db.execute("SELECT user_id, visibility FROM trips WHERE id = ?", (trip_id,)) as cur:
             trip_row = await cur.fetchone()
         if not trip_row:
             raise HTTPException(404, "The shared album no longer exists")
-        trip = await store.get_trip(link.trip_id, trip_row["user_id"])
+
+        owner_id = trip_row["user_id"]
+        visibility = trip_row["visibility"]
+
+        if visibility == "friends_only":
+            if not current_user:
+                raise HTTPException(403, "This shared trip is only available to friends")
+            has_access = await store.user_can_access_trip(current_user.id, trip_id)
+            if not has_access and not await store.are_friends(owner_id, current_user.id):
+                raise HTTPException(403, "This shared trip is only available to friends")
+
+        trip = await store.get_trip(trip_id, owner_id)
         if not trip:
             raise HTTPException(404, "The shared album no longer exists")
 

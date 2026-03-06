@@ -26,6 +26,7 @@ class Person(BaseModel):
     name: str
     color: str
     is_owner: bool = Field(False, alias="isOwner")
+    is_friend: bool = Field(False, alias="isFriend")
 
     model_config = {"populate_by_name": True}
 
@@ -49,6 +50,43 @@ class UserOut(BaseModel):
     username: str
     display_name: str = Field(alias="displayName")
     person_id: int = Field(alias="personId")
+    home_country: str = Field("", alias="homeCountry")
+    home_currency: str = Field("USD", alias="homeCurrency")
+    created_at: str = Field(alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class UserUpdate(BaseModel):
+    display_name: str | None = Field(None, alias="displayName")
+    home_country: str | None = Field(None, alias="homeCountry")
+    home_currency: str | None = Field(None, alias="homeCurrency")
+
+    model_config = {"populate_by_name": True}
+
+
+class FriendRequestCreate(BaseModel):
+    username: str
+
+
+class FriendOut(BaseModel):
+    id: int
+    username: str
+    display_name: str = Field(alias="displayName")
+    person_id: int = Field(alias="personId")
+    home_country: str = Field("", alias="homeCountry")
+    home_currency: str = Field("USD", alias="homeCurrency")
+
+    model_config = {"populate_by_name": True}
+
+
+class FriendRequestOut(BaseModel):
+    id: int
+    from_user_id: int = Field(alias="fromUserId")
+    to_user_id: int = Field(alias="toUserId")
+    from_username: str = Field("", alias="fromUsername")
+    from_display_name: str = Field("", alias="fromDisplayName")
+    status: str
     created_at: str = Field(alias="createdAt")
 
     model_config = {"populate_by_name": True}
@@ -110,6 +148,7 @@ class PhotoUpdate(BaseModel):
 class TripCreate(BaseModel):
     name: str
     color: str = "#E74C3C"
+    visibility: str = "friends_only"
 
 
 class TripUpdate(BaseModel):
@@ -121,6 +160,7 @@ class TripUpdate(BaseModel):
     end_date: str | None = Field(None, alias="endDate")
     rating: int | None = None
     description: str | None = None
+    visibility: str | None = None
 
     model_config = {"populate_by_name": True}
 
@@ -136,6 +176,9 @@ class Trip(BaseModel):
     start_date: str = Field("", alias="startDate")
     end_date: str = Field("", alias="endDate")
     rating: int = 0
+    visibility: str = "friends_only"
+    owner_user_id: int = Field(alias="ownerUserId")
+    is_shared: bool = Field(False, alias="isShared")
     places: list[Place] = []
     photos: list[PhotoOut] = []
     person_ids: list[int] = Field(default_factory=list, alias="personIds")
@@ -162,6 +205,31 @@ class ShareLinkOut(BaseModel):
     trip_id: int | None = Field(None, alias="tripId")
     url: str
     created_at: str = Field("", alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class ExpenseCreate(BaseModel):
+    trip_id: int = Field(alias="tripId")
+    place_id: int | None = Field(None, alias="placeId")
+    amount: float
+    currency: str
+    note: str = ""
+
+    model_config = {"populate_by_name": True}
+
+
+class ExpenseOut(BaseModel):
+    id: int
+    trip_id: int = Field(alias="tripId")
+    place_id: int | None = Field(None, alias="placeId")
+    amount: float
+    currency: str
+    amount_home: float = Field(alias="amountHome")
+    home_currency: str = Field(alias="homeCurrency")
+    rate_used: float = Field(alias="rateUsed")
+    note: str = ""
+    created_at: str = Field(alias="createdAt")
 
     model_config = {"populate_by_name": True}
 

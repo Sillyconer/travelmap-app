@@ -5,7 +5,7 @@ from sqlite3 import IntegrityError
 
 from auth_utils import create_access_token, hash_password, verify_password
 from dependencies import get_current_user, get_store
-from models import UserCreate, UserLogin, UserOut
+from models import UserCreate, UserLogin, UserOut, UserUpdate
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -48,3 +48,12 @@ async def login(data: UserLogin):
 @router.get("/me", response_model=UserOut)
 async def me(current_user: UserOut = Depends(get_current_user)):
     return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(data: UserUpdate, current_user: UserOut = Depends(get_current_user)):
+    store = get_store()
+    updated = await store.update_user(current_user.id, data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return updated
