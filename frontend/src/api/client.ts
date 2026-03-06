@@ -1,4 +1,19 @@
-import type { Trip, TripCreate, TripUpdate, Person, PersonCreate, PersonUpdate, Place, PlaceCreate, PlaceUpdate, User } from '../types/models';
+import type {
+    CurrencyOption,
+    Expense,
+    Friend,
+    FriendRequest,
+    Person,
+    PersonCreate,
+    PersonUpdate,
+    Place,
+    PlaceCreate,
+    PlaceUpdate,
+    Trip,
+    TripCreate,
+    TripUpdate,
+    User,
+} from '../types/models';
 
 function getStoredToken(): string | null {
     const raw = localStorage.getItem('travelmap-auth');
@@ -56,7 +71,10 @@ export const createTrip = (data: TripCreate) => fetcher<Trip>('/trips', { method
 export const updateTrip = (id: number, data: TripUpdate) => fetcher<Trip>(`/trips/${id}/update`, { method: 'POST', body: JSON.stringify(data) });
 export const deleteTrip = (id: number) => fetcher<{ ok: boolean }>(`/trips/${id}`, { method: 'DELETE' });
 export const setTripPersons = (tripId: number, personIds: number[]) =>
-    fetcher<Trip>(`/trips/${tripId}/persons`, { method: 'POST', body: JSON.stringify({ personIds: personIds.join(',') }) }); // TODO: send as query param if backend expects it
+    fetcher<Trip>(`/trips/${tripId}/persons?person_ids=${encodeURIComponent(personIds.join(','))}`, { method: 'POST' });
+export const getTripMembers = (tripId: number) => fetcher<Friend[]>(`/trips/${tripId}/members`);
+export const inviteTripMember = (tripId: number, friendUserId: number) => fetcher<{ ok: boolean }>(`/trips/${tripId}/members/${friendUserId}`, { method: 'POST' });
+export const removeTripMember = (tripId: number, memberUserId: number) => fetcher<{ ok: boolean }>(`/trips/${tripId}/members/${memberUserId}`, { method: 'DELETE' });
 
 // ── Persons ──
 export const getPersons = () => fetcher<Person[]>('/persons');
@@ -88,6 +106,27 @@ export const register = (data: { username: string; displayName: string; password
 export const login = (data: { username: string; password: string }) =>
     fetcher<{ token: string; user: User }>('/auth/login', { method: 'POST', body: JSON.stringify(data) });
 export const getMe = () => fetcher<User>('/auth/me');
+export const updateMe = (data: Partial<Pick<User, 'displayName' | 'homeCountry' | 'homeCurrency'>>) =>
+    fetcher<User>('/auth/me', { method: 'PATCH', body: JSON.stringify(data) });
+
+// ── Social ──
+export const getFriends = () => fetcher<Friend[]>('/social/friends');
+export const getFriendRequests = () => fetcher<FriendRequest[]>('/social/friend-requests');
+export const sendFriendRequest = (username: string) =>
+    fetcher<FriendRequest>('/social/friend-requests', { method: 'POST', body: JSON.stringify({ username }) });
+export const acceptFriendRequest = (requestId: number) =>
+    fetcher<{ ok: boolean }>(`/social/friend-requests/${requestId}/accept`, { method: 'POST' });
+
+// ── Finance ──
+export const getCurrencies = () => fetcher<CurrencyOption[]>('/currencies');
+export const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string) =>
+    fetcher<{ rate: number; converted: number; fromCurrency: string; toCurrency: string; amount: number }>('/currency/convert', {
+        method: 'POST',
+        body: JSON.stringify({ amount, fromCurrency, toCurrency }),
+    });
+export const createExpense = (tripId: number, data: { amount: number; currency: string; placeId?: number; note?: string }) =>
+    fetcher<Expense>(`/trips/${tripId}/expenses`, { method: 'POST', body: JSON.stringify(data) });
+export const getExpenses = (tripId: number) => fetcher<Expense[]>(`/trips/${tripId}/expenses`);
 
 // ── Share Links ──
 export const createShareLink = (data: { type: string; photoId?: number; tripId?: number }) =>

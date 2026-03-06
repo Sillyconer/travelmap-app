@@ -10,6 +10,7 @@ interface AuthState {
     login: (username: string, password: string) => Promise<void>;
     register: (username: string, displayName: string, password: string) => Promise<void>;
     loadMe: () => Promise<void>;
+    updateProfile: (data: Partial<Pick<User, 'displayName' | 'homeCountry' | 'homeCurrency'>>) => Promise<void>;
     logout: () => void;
 }
 
@@ -42,6 +43,11 @@ export const useAuthStore = create<AuthState>()(
                 } catch {
                     set({ token: null, user: null, isAuthenticated: false });
                 }
+            },
+
+            updateProfile: async (data) => {
+                const user = await api.updateMe(data);
+                set({ user, isAuthenticated: true });
             },
 
             logout: () => {
