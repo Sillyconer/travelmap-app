@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from dependencies import get_current_user, get_store
-from models import NotificationOut, NotificationReadUpdate, UserOut
+from models import NotificationArchiveUpdate, NotificationOut, NotificationReadUpdate, UserOut
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
@@ -13,6 +13,7 @@ async def list_notifications(
     limit: int = 50,
     offset: int = 0,
     unread_only: bool = False,
+    include_archived: bool = False,
     current_user: UserOut = Depends(get_current_user),
 ):
     store = get_store()
@@ -21,6 +22,7 @@ async def list_notifications(
         limit=limit,
         offset=offset,
         unread_only=unread_only,
+        include_archived=include_archived,
     )
 
 
@@ -42,4 +44,11 @@ async def mark_read(payload: NotificationReadUpdate, current_user: UserOut = Dep
 async def mark_all_read(current_user: UserOut = Depends(get_current_user)):
     store = get_store()
     updated = await store.mark_all_notifications_read(current_user.id)
+    return {"updated": updated}
+
+
+@router.post("/archive", response_model=dict)
+async def archive_notifications(payload: NotificationArchiveUpdate, current_user: UserOut = Depends(get_current_user)):
+    store = get_store()
+    updated = await store.archive_notifications(current_user.id, payload.ids)
     return {"updated": updated}

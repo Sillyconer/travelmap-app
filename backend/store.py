@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     payload     TEXT    NOT NULL DEFAULT '{}',
     occurrence_count INTEGER NOT NULL DEFAULT 1,
     is_read     INTEGER NOT NULL DEFAULT 0,
+    is_archived INTEGER NOT NULL DEFAULT 0,
     updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
@@ -283,6 +284,7 @@ class Store:
         await self._ensure_column("users", "show_featured_friends", "INTEGER NOT NULL DEFAULT 1")
         await self._ensure_column("notifications", "group_key", "TEXT NOT NULL DEFAULT ''")
         await self._ensure_column("notifications", "occurrence_count", "INTEGER NOT NULL DEFAULT 1")
+        await self._ensure_column("notifications", "is_archived", "INTEGER NOT NULL DEFAULT 0")
         await self._ensure_column("notifications", "updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))")
 
         await self.db.execute("UPDATE trips SET user_id = 1 WHERE user_id IS NULL")
@@ -291,6 +293,7 @@ class Store:
         await self.db.execute("UPDATE trips SET visibility = 'friends_only' WHERE visibility IS NULL OR visibility = ''")
         await self.db.execute("UPDATE notifications SET group_key = '' WHERE group_key IS NULL")
         await self.db.execute("UPDATE notifications SET occurrence_count = 1 WHERE occurrence_count IS NULL OR occurrence_count < 1")
+        await self.db.execute("UPDATE notifications SET is_archived = 0 WHERE is_archived IS NULL")
         await self.db.execute("UPDATE notifications SET updated_at = created_at WHERE updated_at IS NULL")
 
         await self.db.execute(
@@ -335,6 +338,7 @@ class Store:
                 payload     TEXT    NOT NULL DEFAULT '{}',
                 occurrence_count INTEGER NOT NULL DEFAULT 1,
                 is_read     INTEGER NOT NULL DEFAULT 0,
+                is_archived INTEGER NOT NULL DEFAULT 0,
                 updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
                 created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
             )
@@ -1480,10 +1484,16 @@ class Store:
         limit: int = 50,
         offset: int = 0,
         unread_only: bool = False,
+        include_archived: bool = False,
     ) -> list[NotificationOut]:
         safe_limit = max(1, min(limit, 100))
         safe_offset = max(0, offset)
-        where_clause = "WHERE user_id = ?" if not unread_only else "WHERE user_id = ? AND is_read = 0"
+        where_parts = ["user_id = ?"]
+        if unread_only:
+            where_parts.append("is_read = 0")
+        if not include_archived:
+            where_parts.append("is_archived = 0")
+        where_clause = "WHERE " + " AND ".join(where_parts)
         rows = await self.db.execute_fetchall(
             f"""
             SELECT id, type, title, message, payload, occurrence_count, is_read, created_at, updated_at
@@ -1509,17 +1519,17 @@ class Store:
                     title=row["title"],
                     message=row["message"],
                     payload=payload,
-                    occurrence_count=int(row["occurrence_count"] or 1),
-                    is_read=bool(row["is_read"]),
-                    created_at=row["created_at"],
-                    updated_at=row["updated_at"] or row["created_at"],
+                    occurrenceCount=int(row["occurrence_count"] or 1),
+                    isRead=bool(row["is_read"]),
+                    createdAt=row["created_at"],
+                    updatedAt=row["updated_at"] or row["created_at"],
                 )
             )
         return result
 
     async def get_unread_notification_count(self, user_id: int) -> int:
         async with self.db.execute(
-            "SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND is_read = 0",
+            "SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND is_read = 0 AND is_archived = 0",
             (user_id,),
         ) as cursor:
             row = await cursor.fetchone()
@@ -1539,8 +1549,20 @@ class Store:
 
     async def mark_all_notifications_read(self, user_id: int) -> int:
         cursor = await self.db.execute(
-            "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0",
+            "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0 AND is_archived = 0",
             (user_id,),
+        )
+        await self.db.commit()
+        return int(cursor.rowcount or 0)
+
+    async def archive_notifications(self, user_id: int, notification_ids: list[int]) -> int:
+        ids = list(dict.fromkeys([int(nid) for nid in notification_ids if nid]))
+        if not ids:
+            return 0
+        placeholders = ",".join(["?"] * len(ids))
+        cursor = await self.db.execute(
+            f"UPDATE notifications SET is_archived = 1, updated_at = datetime('now') WHERE user_id = ? AND id IN ({placeholders})",
+            (user_id, *ids),
         )
         await self.db.commit()
         return int(cursor.rowcount or 0)

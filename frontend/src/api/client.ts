@@ -167,11 +167,12 @@ export const searchUsers = (query: string, limit = 25) =>
     fetcher<UserSearchResult[]>(`/social/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
 
 // ── Notifications ──
-export const getNotifications = (options?: { limit?: number; offset?: number; unreadOnly?: boolean }) => {
+export const getNotifications = (options?: { limit?: number; offset?: number; unreadOnly?: boolean; includeArchived?: boolean }) => {
     const params = new URLSearchParams();
     if (options?.limit !== undefined) params.set('limit', String(options.limit));
     if (options?.offset !== undefined) params.set('offset', String(options.offset));
     if (options?.unreadOnly !== undefined) params.set('unread_only', String(options.unreadOnly));
+    if (options?.includeArchived !== undefined) params.set('include_archived', String(options.includeArchived));
     const qs = params.toString();
     return fetcher<NotificationItem[]>(`/notifications${qs ? `?${qs}` : ''}`);
 };
@@ -180,6 +181,8 @@ export const markNotificationsRead = (ids: number[]) =>
     fetcher<{ updated: number }>('/notifications/read', { method: 'POST', body: JSON.stringify({ ids }) });
 export const markAllNotificationsRead = () =>
     fetcher<{ updated: number }>('/notifications/read-all', { method: 'POST' });
+export const archiveNotifications = (ids: number[]) =>
+    fetcher<{ updated: number }>('/notifications/archive', { method: 'POST', body: JSON.stringify({ ids }) });
 
 // ── Unified Search ──
 export const unifiedSearch = (query: string, limit = 8) =>

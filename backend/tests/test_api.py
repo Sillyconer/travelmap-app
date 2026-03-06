@@ -134,6 +134,14 @@ async def test_notifications_for_friend_request_and_read_flow():
         assert unread_after.status_code == 200
         assert unread_after.json()["count"] == 0
 
+        archived = await alice_client.post("/api/notifications/archive", json={"ids": [payload[0]["id"]]})
+        assert archived.status_code == 200
+        assert archived.json()["updated"] == 1
+
+        listed_after_archive = await alice_client.get("/api/notifications")
+        assert listed_after_archive.status_code == 200
+        assert all(n["id"] != payload[0]["id"] for n in listed_after_archive.json())
+
 
 @pytest.mark.asyncio
 async def test_trip_invite_creates_notification_for_invited_friend():

@@ -17,7 +17,7 @@ export const NotificationsPage = () => {
     const [items, setItems] = useState<NotificationItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+    const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'mentions' | 'invites' | 'comments'>('all');
 
     const unreadCount = useMemo(() => items.filter(item => !item.isRead).length, [items]);
 
@@ -34,8 +34,8 @@ export const NotificationsPage = () => {
     };
 
     useEffect(() => {
-        load(showUnreadOnly);
-    }, [showUnreadOnly]);
+        load(activeFilter === 'unread');
+    }, [activeFilter]);
 
     const markOneRead = async (id: number) => {
         setIsSubmitting(true);
@@ -59,6 +59,19 @@ export const NotificationsPage = () => {
             showSnackbar('All notifications marked as read');
         } catch (err: any) {
             showSnackbar(`Failed to mark all as read: ${err.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const archiveOne = async (id: number) => {
+        setIsSubmitting(true);
+        try {
+            await api.archiveNotifications([id]);
+            setItems(prev => prev.filter(item => item.id !== id));
+            window.dispatchEvent(new Event('notifications:changed'));
+        } catch (err: any) {
+            showSnackbar(`Failed to dismiss notification: ${err.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -110,32 +123,59 @@ export const NotificationsPage = () => {
         navigate(route);
     };
 
+    const filteredItems = useMemo(() => {
+        if (activeFilter === 'all' || activeFilter === 'unread') {
+            return items;
+        }
+        if (activeFilter === 'mentions') {
+            return items.filter(item => item.type === 'comment_mention');
+        }
+        if (activeFilter === 'invites') {
+            return items.filter(item => item.type === 'trip_invite' || item.type === 'friend_request_received');
+        }
+        if (activeFilter === 'comments') {
+            return items.filter(item => item.type === 'photo_commented' || item.type === 'comment_mention');
+        }
+        return items;
+    }, [items, activeFilter]);
+
     return (
         <div className={styles.page}>
             <div className={styles.header}>
                 <h1>Notifications</h1>
                 <div className={styles.actions}>
-                    <label className={styles.checkboxRow}>
-                        <input
-                            type="checkbox"
-                            checked={showUnreadOnly}
-                            onChange={e => setShowUnreadOnly(e.target.checked)}
-                        />
-                        Show unread only
-                    </label>
                     <Button onClick={markAllRead} disabled={isSubmitting || unreadCount === 0}>Mark all read</Button>
                 </div>
+            </div>
+
+            <div className={styles.filterRow}>
+                {[
+                    { key: 'all', label: 'All' },
+                    { key: 'unread', label: 'Unread' },
+                    { key: 'mentions', label: 'Mentions' },
+                    { key: 'invites', label: 'Invites' },
+                    { key: 'comments', label: 'Comments' },
+                ].map(filter => (
+                    <button
+                        key={filter.key}
+                        type="button"
+                        className={`${styles.filterChip} ${activeFilter === filter.key ? styles.filterChipActive : ''}`}
+                        onClick={() => setActiveFilter(filter.key as typeof activeFilter)}
+                    >
+                        {filter.label}
+                    </button>
+                ))}
             </div>
 
             <p className={styles.meta}>{unreadCount} unread</p>
 
             {isLoading ? (
                 <Card className={styles.empty}>Loading notifications...</Card>
-            ) : items.length === 0 ? (
+            ) : filteredItems.length === 0 ? (
                 <Card className={styles.empty}>No notifications yet.</Card>
             ) : (
                 <div className={styles.list}>
-                    {items.map(item => (
+                    {filteredItems.map(item => (
                         <Card key={item.id} className={`${styles.item} ${item.isRead ? styles.read : styles.unread}`}>
                             <div className={styles.itemHead}>
                                 <div>
@@ -153,6 +193,7 @@ export const NotificationsPage = () => {
                                     {!item.isRead && (
                                         <Button onClick={() => markOneRead(item.id)} disabled={isSubmitting}>Mark read</Button>
                                     )}
+                                    <Button onClick={() => archiveOne(item.id)} disabled={isSubmitting} variant="text">Dismiss</Button>
                                 </div>
                             </div>
                         </Card>

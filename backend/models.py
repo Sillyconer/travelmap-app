@@ -93,6 +93,10 @@ class NotificationReadUpdate(BaseModel):
     ids: list[int] = Field(default_factory=list)
 
 
+class NotificationArchiveUpdate(BaseModel):
+    ids: list[int] = Field(default_factory=list)
+
+
 class CommentCreate(BaseModel):
     entity_type: str = Field(alias="entityType")
     entity_id: int = Field(alias="entityId")
