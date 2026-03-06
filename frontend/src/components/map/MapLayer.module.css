@@ -11,18 +11,13 @@
     background-color: var(--map-background, var(--md-sys-color-surface-container-low, #1e1e1e));
 }
 
-.map :global(.leaflet-tile.tile-oceanic-base) {
-    filter: saturate(4) hue-rotate(178deg) brightness(0.84) contrast(1.12);
+.map :global(.leaflet-tile.tile-oceanic-boundaries) {
+    filter: grayscale(1) brightness(0.78) contrast(1.12);
     mix-blend-mode: multiply;
 }
 
-.map :global(.leaflet-tile.tile-oceanic-water) {
-    filter: grayscale(1) brightness(0.92) contrast(1.18);
-    mix-blend-mode: color;
-}
-
 .map :global(.leaflet-tile.tile-oceanic-labels) {
-    filter: grayscale(1) brightness(0.6) contrast(1.25);
+    filter: grayscale(1) brightness(0.74) contrast(1.1);
     mix-blend-mode: multiply;
 }
 
