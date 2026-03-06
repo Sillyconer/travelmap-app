@@ -19,6 +19,7 @@ import type {
     TripMember,
     TripCreate,
     TripUpdate,
+    UnifiedSearchResults,
     User,
     UserSearchResult,
 } from '../types/models';
@@ -176,6 +177,10 @@ export const markNotificationsRead = (ids: number[]) =>
     fetcher<{ updated: number }>('/notifications/read', { method: 'POST', body: JSON.stringify({ ids }) });
 export const markAllNotificationsRead = () =>
     fetcher<{ updated: number }>('/notifications/read-all', { method: 'POST' });
+
+// ── Unified Search ──
+export const unifiedSearch = (query: string, limit = 8) =>
+    fetcher<UnifiedSearchResults>(`/search?q=${encodeURIComponent(query)}&limit=${limit}`);
 
 // ── Profiles ──
 export const searchProfiles = (query: string, limit = 25) =>

@@ -9,6 +9,7 @@ import {
     Users,
     UserCircle2,
     Bell,
+    Search,
     Settings,
     MapPin
 } from 'lucide-react';
@@ -160,6 +161,27 @@ export const Navigation = () => {
                             )}
                             <span className={styles.icon}><Users size={24} /></span>
                             <span className={styles.label}>People</span>
+                        </>
+                    )}
+                </NavLink>
+
+                <NavLink
+                    to="/search"
+                    className={({ isActive }) =>
+                        isActive ? `${styles.item} ${styles.active}` : styles.item
+                    }
+                >
+                    {({ isActive }) => (
+                        <>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="navPill"
+                                    className={styles.activePill}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <span className={styles.icon}><Search size={24} /></span>
+                            <span className={styles.label}>Search</span>
                         </>
                     )}
                 </NavLink>

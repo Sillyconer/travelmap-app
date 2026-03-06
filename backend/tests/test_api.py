@@ -231,3 +231,25 @@ async def test_trip_member_roles_affect_edit_permissions():
             json={"name": "Now Allowed", "lat": 51.5, "lng": -0.1, "note": ""},
         )
         assert can_add_place.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_unified_search_returns_grouped_results(authed_client: AsyncClient):
+    created = await authed_client.post(
+        "/api/trips",
+        json={"name": "Tokyo Adventure", "color": "#22AAEE", "visibility": "friends_only"},
+    )
+    assert created.status_code == 201
+    trip_id = created.json()["id"]
+
+    place = await authed_client.post(
+        f"/api/trips/{trip_id}/places",
+        json={"name": "Tokyo Tower", "lat": 35.6586, "lng": 139.7454, "note": "sunset"},
+    )
+    assert place.status_code == 201
+
+    search = await authed_client.get("/api/search?q=tokyo")
+    assert search.status_code == 200
+    payload = search.json()
+    assert any(t["name"] == "Tokyo Adventure" for t in payload["trips"])
+    assert any(p["name"] == "Tokyo Tower" for p in payload["places"])

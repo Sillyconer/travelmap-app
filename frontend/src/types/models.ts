@@ -68,6 +68,46 @@ export interface NotificationItem {
     createdAt: string;
 }
 
+export interface SearchTripResult {
+    id: number;
+    name: string;
+    color: string;
+    route: string;
+}
+
+export interface SearchPlaceResult {
+    id: number;
+    name: string;
+    note: string;
+    tripId: number;
+    tripName: string;
+    route: string;
+}
+
+export interface SearchPhotoResult {
+    id: number;
+    name: string;
+    thumbUrl: string;
+    tripId: number | null;
+    tripName: string;
+    route: string;
+}
+
+export interface SearchProfileResult {
+    id: number;
+    username: string;
+    displayName: string;
+    isFriend: boolean;
+    route: string;
+}
+
+export interface UnifiedSearchResults {
+    trips: SearchTripResult[];
+    places: SearchPlaceResult[];
+    photos: SearchPhotoResult[];
+    profiles: SearchProfileResult[];
+}
+
 export interface ProfileTrip {
     id: number;
     name: string;

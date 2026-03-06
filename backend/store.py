@@ -1707,6 +1707,108 @@ class Store:
             for r in rows
         ]
 
+    async def unified_search(self, user_id: int, query: str, limit: int = 8) -> dict:
+        term = f"%{query.strip()}%"
+        safe_limit = max(1, min(limit, 25))
+
+        trip_rows = await self.db.execute_fetchall(
+            """
+            SELECT DISTINCT t.id, t.name, t.color
+            FROM trips t
+            LEFT JOIN trip_members tm ON tm.trip_id = t.id
+            WHERE (t.user_id = ? OR tm.user_id = ?)
+              AND t.name LIKE ?
+            ORDER BY t.id DESC
+            LIMIT ?
+            """,
+            (user_id, user_id, term, safe_limit),
+        )
+
+        place_rows = await self.db.execute_fetchall(
+            """
+            SELECT p.id, p.name, p.note, p.trip_id, t.name AS trip_name
+            FROM places p
+            JOIN trips t ON t.id = p.trip_id
+            LEFT JOIN trip_members tm ON tm.trip_id = t.id AND tm.user_id = ?
+            WHERE (t.user_id = ? OR tm.user_id = ?)
+              AND (p.name LIKE ? OR p.note LIKE ?)
+            ORDER BY p.id DESC
+            LIMIT ?
+            """,
+            (user_id, user_id, user_id, term, term, safe_limit),
+        )
+
+        photo_rows = await self.db.execute_fetchall(
+            """
+            SELECT p.id, p.name, p.thumb_url, p.trip_id, t.name AS trip_name
+            FROM photos p
+            LEFT JOIN trips t ON t.id = p.trip_id
+            WHERE p.user_id = ?
+              AND p.name LIKE ?
+            ORDER BY p.id DESC
+            LIMIT ?
+            """,
+            (user_id, term, safe_limit),
+        )
+
+        profile_rows = await self.db.execute_fetchall(
+            """
+            SELECT u.id, u.username, u.display_name,
+                   CASE WHEN f.user_id IS NULL THEN 0 ELSE 1 END AS is_friend
+            FROM users u
+            LEFT JOIN friends f ON f.user_id = ? AND f.friend_user_id = u.id
+            WHERE u.id != ?
+              AND (u.username LIKE ? OR u.display_name LIKE ?)
+            ORDER BY is_friend DESC, u.display_name ASC
+            LIMIT ?
+            """,
+            (user_id, user_id, term, term, safe_limit),
+        )
+
+        return {
+            "trips": [
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "color": r["color"],
+                    "route": f"/trips/{r['id']}",
+                }
+                for r in trip_rows
+            ],
+            "places": [
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "note": r["note"] or "",
+                    "tripId": r["trip_id"],
+                    "tripName": r["trip_name"],
+                    "route": f"/trips/{r['trip_id']}",
+                }
+                for r in place_rows
+            ],
+            "photos": [
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "thumbUrl": r["thumb_url"],
+                    "tripId": r["trip_id"],
+                    "tripName": r["trip_name"] or "Unassigned",
+                    "route": "/photos" if r["trip_id"] is None else f"/trips/{r['trip_id']}",
+                }
+                for r in photo_rows
+            ],
+            "profiles": [
+                {
+                    "id": r["id"],
+                    "username": r["username"],
+                    "displayName": r["display_name"],
+                    "isFriend": bool(r["is_friend"]),
+                    "route": f"/profiles/{r['username']}",
+                }
+                for r in profile_rows
+            ],
+        }
+
     # ── Trip Members ──────────────────────────────────────────────────────
 
     async def invite_friend_to_trip(self, owner_user_id: int, trip_id: int, friend_user_id: int, role: str = "viewer") -> bool:

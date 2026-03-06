@@ -14,6 +14,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ProfilesPage } from './pages/ProfilesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { SearchPage } from './pages/SearchPage';
 import { useAuthStore } from './store/useAuthStore';
 
 const ProtectedLayout = () => {
@@ -45,6 +46,7 @@ function App() {
           <Route path="profiles" element={<ProfilesPage />} />
           <Route path="profiles/:username" element={<ProfilePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="search" element={<SearchPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
