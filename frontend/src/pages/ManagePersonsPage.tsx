@@ -3,14 +3,17 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { Avatar } from '../components/ui/Avatar';
 import { usePersons } from '../features/persons/usePersons';
 import { showSnackbar } from '../components/ui/Snackbar';
 import * as api from '../api/client';
-import type { Friend, FriendRequest } from '../types/models';
+import type { Friend, FriendRequest, UserSearchResult } from '../types/models';
+import { useNavigate } from 'react-router-dom';
 import styles from './ManagePersonsPage.module.css';
 
 export const ManagePersonsPage = () => {
-    const { persons, isLoading, createPerson, updatePerson, deletePerson } = usePersons();
+    const navigate = useNavigate();
+    const { persons, isLoading, fetchPersons, createPerson, updatePerson, deletePerson } = usePersons();
 
     // State for Create Modal
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -29,6 +32,8 @@ export const ManagePersonsPage = () => {
     const [friendUsername, setFriendUsername] = useState('');
     const [friends, setFriends] = useState<Friend[]>([]);
     const [requests, setRequests] = useState<FriendRequest[]>([]);
+    const [outgoingRequests, setOutgoingRequests] = useState<FriendRequest[]>([]);
+    const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
 
     const owner = persons.find(p => p.isOwner);
     const companions = persons.filter(p => !p.isOwner);
@@ -36,9 +41,14 @@ export const ManagePersonsPage = () => {
 
     const loadSocial = async () => {
         try {
-            const [friendsData, requestsData] = await Promise.all([api.getFriends(), api.getFriendRequests()]);
+            const [friendsData, requestsData, outgoingData] = await Promise.all([
+                api.getFriends(),
+                api.getFriendRequests(),
+                api.getOutgoingFriendRequests(),
+            ]);
             setFriends(friendsData);
             setRequests(requestsData);
+            setOutgoingRequests(outgoingData);
         } catch {
             // ignore
         }
@@ -47,6 +57,23 @@ export const ManagePersonsPage = () => {
     useEffect(() => {
         loadSocial();
     }, []);
+
+    useEffect(() => {
+        const query = friendUsername.trim();
+        if (query.length < 2) {
+            setSearchResults([]);
+            return;
+        }
+        const t = setTimeout(async () => {
+            try {
+                const result = await api.searchUsers(query, 10);
+                setSearchResults(result);
+            } catch {
+                setSearchResults([]);
+            }
+        }, 200);
+        return () => clearTimeout(t);
+    }, [friendUsername]);
 
     const openEditModal = (person: (typeof persons)[number]) => {
         setEditingPerson(person.id);
@@ -98,7 +125,9 @@ export const ManagePersonsPage = () => {
         try {
             await api.sendFriendRequest(friendUsername.trim());
             setFriendUsername('');
+            setSearchResults([]);
             showSnackbar('Friend request sent');
+            await loadSocial();
         } catch (err: any) {
             showSnackbar(err.message || 'Failed to send request');
         }
@@ -109,8 +138,40 @@ export const ManagePersonsPage = () => {
             await api.acceptFriendRequest(requestId);
             showSnackbar('Friend request accepted');
             await loadSocial();
+            await fetchPersons();
         } catch {
             showSnackbar('Failed to accept request');
+        }
+    };
+
+    const handleDeclineRequest = async (requestId: number) => {
+        try {
+            await api.declineFriendRequest(requestId);
+            showSnackbar('Friend request declined');
+            await loadSocial();
+        } catch {
+            showSnackbar('Failed to decline request');
+        }
+    };
+
+    const handleCancelRequest = async (requestId: number) => {
+        try {
+            await api.cancelFriendRequest(requestId);
+            showSnackbar('Friend request canceled');
+            await loadSocial();
+        } catch {
+            showSnackbar('Failed to cancel request');
+        }
+    };
+
+    const handleRemoveFriend = async (friendUserId: number) => {
+        try {
+            await api.removeFriend(friendUserId);
+            showSnackbar('Friend removed');
+            await loadSocial();
+            await fetchPersons();
+        } catch {
+            showSnackbar('Failed to remove friend');
         }
     };
 
@@ -131,19 +192,77 @@ export const ManagePersonsPage = () => {
                         <Input label="Add by username" value={friendUsername} onChange={e => setFriendUsername(e.target.value)} fullWidth />
                         <Button onClick={handleSendFriendRequest}>Send Request</Button>
                     </div>
+                    {searchResults.length > 0 && (
+                        <div className={styles.searchResults}>
+                            {searchResults.map(user => (
+                                <button
+                                    key={user.id}
+                                    className={styles.searchItem}
+                                    onClick={() => setFriendUsername(user.username)}
+                                    type="button"
+                                >
+                                    <span className={styles.userInline}>
+                                        <Avatar seed={user.username} name={user.displayName} size={28} />
+                                        <span>{user.displayName} (@{user.username})</span>
+                                    </span>
+                                    <span className={styles.searchMeta}>
+                                        {user.isFriend ? 'Friend' : user.hasOutgoing ? 'Requested' : user.hasIncoming ? 'Requested you' : 'Add'}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     {requests.length > 0 && (
                         <div className={styles.requestList}>
                             <h4>Incoming Requests</h4>
                             {requests.map(req => (
                                 <div key={req.id} className={styles.requestItem}>
-                                    <span>{req.fromDisplayName || req.fromUsername} (@{req.fromUsername})</span>
-                                    <Button size="sm" onClick={() => handleAcceptRequest(req.id)}>Accept</Button>
+                                    <button type="button" className={styles.profileLinkBtn} onClick={() => navigate(`/profiles/${req.fromUsername}`)}>
+                                        <span className={styles.userInline}>
+                                            <Avatar seed={req.fromUsername} name={req.fromDisplayName || req.fromUsername} size={28} />
+                                            <span>{req.fromDisplayName || req.fromUsername} (@{req.fromUsername})</span>
+                                        </span>
+                                    </button>
+                                    <div className={styles.requestActions}>
+                                        <Button size="sm" onClick={() => handleAcceptRequest(req.id)}>Accept</Button>
+                                        <Button size="sm" variant="text" onClick={() => handleDeclineRequest(req.id)}>Decline</Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {outgoingRequests.length > 0 && (
+                        <div className={styles.requestList}>
+                            <h4>Outgoing Requests</h4>
+                            {outgoingRequests.map(req => (
+                                <div key={req.id} className={styles.requestItem}>
+                                    <button type="button" className={styles.profileLinkBtn} onClick={() => navigate(`/profiles/${req.toUsername}`)}>
+                                        <span className={styles.userInline}>
+                                            <Avatar seed={req.toUsername} name={req.toDisplayName || req.toUsername} size={28} />
+                                            <span>{req.toDisplayName || req.toUsername} (@{req.toUsername})</span>
+                                        </span>
+                                    </button>
+                                    <Button size="sm" variant="text" onClick={() => handleCancelRequest(req.id)}>Cancel</Button>
                                 </div>
                             ))}
                         </div>
                     )}
                     {friends.length > 0 && (
-                        <p className={styles.friendCount}>{friends.length} friend(s) will automatically appear in your people list.</p>
+                        <div className={styles.requestList}>
+                            <h4>Friends</h4>
+                            {friends.map(friend => (
+                                <div key={friend.id} className={styles.requestItem}>
+                                    <button type="button" className={styles.profileLinkBtn} onClick={() => navigate(`/profiles/${friend.username}`)}>
+                                        <span className={styles.userInline}>
+                                            <Avatar seed={friend.username} name={friend.displayName} size={28} />
+                                            <span>{friend.displayName} (@{friend.username})</span>
+                                        </span>
+                                    </button>
+                                    <Button size="sm" variant="text" onClick={() => handleRemoveFriend(friend.id)}>Remove</Button>
+                                </div>
+                            ))}
+                            <p className={styles.friendCount}>{friends.length} friend(s) automatically appear in your people list.</p>
+                        </div>
                     )}
                 </Card>
             </section>

@@ -247,6 +247,17 @@
     padding: 8px;
 }
 
+.planDayGroup {
+    display: grid;
+    gap: 6px;
+}
+
+.planDayTitle {
+    margin: 0;
+    font-weight: 700;
+    color: var(--md-sys-color-primary);
+}
+
 .settlementBlock {
     display: flex;
     flex-direction: column;
@@ -376,6 +387,22 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
+}
+
+.memberIdentityBtn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--md-sys-color-on-surface);
+    cursor: pointer;
+    text-align: left;
+}
+
+.memberIdentityBtn:hover {
+    text-decoration: underline;
 }
 
 .commentHeader small {

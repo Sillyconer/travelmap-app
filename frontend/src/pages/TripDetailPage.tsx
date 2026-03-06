@@ -9,6 +9,7 @@ import type { Trip, PlaceCreate, Place, ItineraryItem } from '../types/models';
 import styles from './TripDetailPage.module.css';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { Avatar } from '../components/ui/Avatar';
 import { SortablePlaceCard } from '../features/trips/components/SortablePlaceCard';
 import { UploadZone } from '../components/upload/UploadZone';
 import { StagingTable, type StagedPhoto } from '../components/upload/StagingTable';
@@ -468,6 +469,16 @@ export const TripDetailPage = () => {
         && (expenseSplitMode === 'equal' || Math.abs(customSplitRemaining) <= 0.01);
     const invitedFriendIds = new Set(members.map(m => m.id));
     const invitables = friends.filter(f => !invitedFriendIds.has(f.id));
+    const itineraryByDay = useMemo(() => {
+        const grouped = new Map<number, ItineraryItem[]>();
+        for (const item of itineraryItems) {
+            if (!grouped.has(item.dayIndex)) {
+                grouped.set(item.dayIndex, []);
+            }
+            grouped.get(item.dayIndex)!.push(item);
+        }
+        return Array.from(grouped.entries()).sort((a, b) => a[0] - b[0]);
+    }, [itineraryItems]);
 
     const handleInviteFriend = async () => {
         if (!selectedFriendId) return;
@@ -614,7 +625,14 @@ export const TripDetailPage = () => {
                             {members.length === 0 && <p className={styles.helperText}>No invited members yet.</p>}
                             {members.map(member => (
                                 <div className={styles.memberRow} key={member.id}>
-                                    <span>{member.displayName} (@{member.username}) · {member.role}</span>
+                                    <button
+                                        type="button"
+                                        className={styles.memberIdentityBtn}
+                                        onClick={() => navigate(`/profiles/${member.username}`)}
+                                    >
+                                        <Avatar seed={member.username} name={member.displayName} size={30} />
+                                        <span>{member.displayName} (@{member.username}) · {member.role}</span>
+                                    </button>
                                     {isOwner && (
                                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                             <select
@@ -692,21 +710,26 @@ export const TripDetailPage = () => {
                         </form>
                         <div className={styles.expenseList}>
                             {itineraryItems.length === 0 && <p className={styles.helperText}>No plan items yet.</p>}
-                            {itineraryItems.map(item => (
-                                <div key={`plan-${item.id}`} className={styles.planRow}>
-                                    <div>
-                                        <strong>Day {item.dayIndex} · {item.title}</strong>
-                                        <p className={styles.helperText}>
-                                            {item.startAt || '--'} - {item.endAt || '--'}
-                                            {item.placeId ? ` · linked place #${item.placeId}` : ''}
-                                            {item.note ? ` · ${item.note}` : ''}
-                                        </p>
-                                    </div>
-                                    {canEdit && (
-                                        <Button size="sm" variant="text" onClick={() => handleDeletePlanItem(item.id)}>
-                                            Remove
-                                        </Button>
-                                    )}
+                            {itineraryByDay.map(([dayIndex, dayItems]) => (
+                                <div key={`day-${dayIndex}`} className={styles.planDayGroup}>
+                                    <p className={styles.planDayTitle}>Day {dayIndex}</p>
+                                    {dayItems.map(item => (
+                                        <div key={`plan-${item.id}`} className={styles.planRow}>
+                                            <div>
+                                                <strong>{item.title}</strong>
+                                                <p className={styles.helperText}>
+                                                    {item.startAt || '--'} - {item.endAt || '--'}
+                                                    {item.placeId ? ` · linked place #${item.placeId}` : ''}
+                                                    {item.note ? ` · ${item.note}` : ''}
+                                                </p>
+                                            </div>
+                                            {canEdit && (
+                                                <Button size="sm" variant="text" onClick={() => handleDeletePlanItem(item.id)}>
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             ))}
                         </div>
@@ -918,8 +941,15 @@ export const TripDetailPage = () => {
                             {comments.map(comment => (
                                 <div key={comment.id} className={styles.commentItem}>
                                     <div className={styles.commentHeader}>
-                                        <strong>{comment.displayName}</strong>
-                                        <small>@{comment.username}</small>
+                                        <button
+                                            type="button"
+                                            className={styles.memberIdentityBtn}
+                                            onClick={() => navigate(`/profiles/${comment.username}`)}
+                                        >
+                                            <Avatar seed={comment.username} name={comment.displayName} size={26} />
+                                            <strong>{comment.displayName}</strong>
+                                            <small>@{comment.username}</small>
+                                        </button>
                                     </div>
                                     <p className={styles.commentBody}>{comment.body}</p>
                                     <div className={styles.commentActions}>

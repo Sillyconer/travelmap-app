@@ -79,9 +79,60 @@
     border-radius: var(--md-sys-shape-corner-small);
 }
 
+.requestActions {
+    display: flex;
+    gap: 8px;
+}
+
+.searchResults {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-small);
+    overflow: hidden;
+}
+
+.searchItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: var(--md-sys-color-surface-container-low);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    text-align: left;
+}
+
+.searchItem:last-child {
+    border-bottom: none;
+}
+
+.searchMeta {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-label-small-size);
+}
+
+.profileLinkBtn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    color: var(--md-sys-color-on-surface);
+    text-align: left;
+    cursor: pointer;
+}
+
+.profileLinkBtn:hover {
+    text-decoration: underline;
+}
+
 .friendCount {
     margin: 0;
     color: var(--md-sys-color-on-surface-variant);
+}
+
+.userInline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .ownerCard {
