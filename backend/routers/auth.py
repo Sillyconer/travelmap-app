@@ -4,14 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlite3 import IntegrityError
 
 from auth_utils import create_access_token, hash_password, verify_password
-from dependencies import get_current_user, get_store
+from dependencies import get_current_user, get_store, rate_limit
 from models import UserCreate, UserLogin, UserOut, UserUpdate
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", status_code=201)
-async def register(data: UserCreate):
+async def register(data: UserCreate, _: None = Depends(rate_limit("auth_register", 15, 60))):
     store = get_store()
     existing = await store.get_user_by_username(data.username)
     if existing:
@@ -31,7 +31,7 @@ async def register(data: UserCreate):
 
 
 @router.post("/login")
-async def login(data: UserLogin):
+async def login(data: UserLogin, _: None = Depends(rate_limit("auth_login", 25, 60))):
     store = get_store()
     user = await store.get_user_by_username(data.username)
     if not user:

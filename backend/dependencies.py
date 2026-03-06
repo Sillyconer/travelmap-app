@@ -6,7 +6,9 @@ Provides the shared Store instance to all routers.
 
 from __future__ import annotations
 
-from fastapi import Header, HTTPException
+from time import monotonic
+
+from fastapi import Header, HTTPException, Request
 
 from auth_utils import decode_access_token
 from models import UserOut
@@ -14,6 +16,7 @@ from store import Store
 
 # Singleton store instance — initialised in main.py on startup
 _store: Store | None = None
+_rate_limit_hits: dict[str, list[float]] = {}
 
 
 def set_store(store: Store) -> None:
@@ -55,3 +58,19 @@ async def get_optional_user(authorization: str | None = Header(default=None)) ->
         return None
     store = get_store()
     return await store.get_user_by_id(user_id)
+
+
+def rate_limit(action: str, limit: int, window_seconds: int):
+    async def dependency(request: Request) -> None:
+        client_host = request.client.host if request.client else "unknown"
+        bucket_key = f"{action}:{client_host}"
+        now = monotonic()
+        cutoff = now - window_seconds
+        existing = _rate_limit_hits.get(bucket_key, [])
+        pruned = [ts for ts in existing if ts >= cutoff]
+        if len(pruned) >= limit:
+            raise HTTPException(status_code=429, detail="Too many requests. Please try again shortly.")
+        pruned.append(now)
+        _rate_limit_hits[bucket_key] = pruned
+
+    return dependency

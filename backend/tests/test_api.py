@@ -253,3 +253,23 @@ async def test_unified_search_returns_grouped_results(authed_client: AsyncClient
     payload = search.json()
     assert any(t["name"] == "Tokyo Adventure" for t in payload["trips"])
     assert any(p["name"] == "Tokyo Tower" for p in payload["places"])
+
+
+@pytest.mark.asyncio
+async def test_login_rate_limit_blocks_excessive_attempts():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        register = await client.post(
+            "/api/auth/register",
+            json={"username": "ratelimit-user", "displayName": "Rate User", "password": "secret"},
+        )
+        assert register.status_code == 201
+
+        latest_status = 0
+        for _ in range(26):
+            login = await client.post(
+                "/api/auth/login",
+                json={"username": "ratelimit-user", "password": "wrong-pass"},
+            )
+            latest_status = login.status_code
+
+        assert latest_status == 429
