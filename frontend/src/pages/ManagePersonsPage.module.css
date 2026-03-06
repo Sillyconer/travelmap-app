@@ -48,6 +48,42 @@
     padding: var(--md-sys-spacing-16);
 }
 
+.socialSection {
+    margin-bottom: var(--md-sys-spacing-24);
+}
+
+.socialCard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-12);
+}
+
+.friendRow {
+    display: flex;
+    gap: var(--md-sys-spacing-12);
+    align-items: flex-end;
+}
+
+.requestList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.requestItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-small);
+}
+
+.friendCount {
+    margin: 0;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
 .ownerCard {
     border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
     background-color: color-mix(in srgb, var(--md-sys-color-primary-container) 35%, var(--md-sys-color-surface-container));

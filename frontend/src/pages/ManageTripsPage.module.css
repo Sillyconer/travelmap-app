@@ -41,6 +41,21 @@
     gap: var(--md-sys-spacing-24);
 }
 
+.sectionTitle {
+    margin: 0 0 var(--md-sys-spacing-12) 0;
+    color: var(--md-sys-color-primary);
+    font-size: var(--md-sys-typescale-title-medium-size);
+}
+
+.visibilityBadge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+    color: var(--md-sys-color-primary);
+    border: 1px solid color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
+}
+
 /* ── Trip Card ── */
 
 .tripCard {
@@ -163,4 +178,12 @@
     .grid {
         grid-template-columns: 1fr;
     }
+}
+
+.selectInput {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-small);
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    padding: 8px 10px;
 }

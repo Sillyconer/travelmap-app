@@ -4,8 +4,10 @@ import { Lightbox } from '../components/gallery/Lightbox';
 import { MdDownload, MdLocationOff, MdCheckCircle } from 'react-icons/md';
 import { motion } from 'framer-motion';
 import { showSnackbar } from '../components/ui/Snackbar';
+import { Modal } from '../components/ui/Modal';
+import { Button } from '../components/ui/Button';
 import styles from './PhotosPage.module.css';
-import type { LibraryPhoto } from '../types/models';
+import type { LibraryPhoto, Trip } from '../types/models';
 
 export const PhotosPage = () => {
     const [photos, setPhotos] = useState<LibraryPhoto[]>([]);
@@ -13,6 +15,12 @@ export const PhotosPage = () => {
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [trips, setTrips] = useState<Trip[]>([]);
+
+    const [isAssignOpen, setIsAssignOpen] = useState(false);
+    const [assignTripId, setAssignTripId] = useState<number | null>(null);
+    const [assignPlaceId, setAssignPlaceId] = useState<number | null>(null);
+    const [assigningIds, setAssigningIds] = useState<number[]>([]);
 
     // Selection state
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -23,6 +31,8 @@ export const PhotosPage = () => {
             try {
                 const data = await api.getAllPhotos();
                 setPhotos(data);
+                const loadedTrips = await api.getTrips();
+                setTrips(loadedTrips);
             } catch (err) {
                 console.error("Failed to load photos", err);
             } finally {
@@ -136,6 +146,38 @@ export const PhotosPage = () => {
         }
     };
 
+    const openAssignModal = () => {
+        const targetIds = selectedIds.size > 0 ? Array.from(selectedIds) : (lightboxIndex !== null ? [photos[lightboxIndex].id] : []);
+        if (targetIds.length === 0) {
+            showSnackbar('Select one or more photos first');
+            return;
+        }
+        setAssigningIds(targetIds);
+        setAssignTripId(null);
+        setAssignPlaceId(null);
+        setIsAssignOpen(true);
+    };
+
+    const handleAssign = async () => {
+        if (!assignTripId || assigningIds.length === 0) return;
+        try {
+            await Promise.all(assigningIds.map(photoId => api.assignPhoto(photoId, assignTripId, assignPlaceId)));
+            const assignedTrip = trips.find(t => t.id === assignTripId);
+            setPhotos(prev => prev.map(p => assigningIds.includes(p.id)
+                ? { ...p, tripId: assignTripId, tripName: assignedTrip?.name ?? 'Assigned Trip', placeId: assignPlaceId ?? undefined }
+                : p
+            ));
+            setSelectedIds(new Set());
+            setIsSelectionMode(false);
+            setIsAssignOpen(false);
+            showSnackbar(`Assigned ${assigningIds.length} photo${assigningIds.length === 1 ? '' : 's'}`);
+        } catch {
+            showSnackbar('Failed to assign photos');
+        }
+    };
+
+    const selectedTrip = trips.find(t => t.id === assignTripId);
+
     // Group photos by month/year (takenAt if available, otherwise "Unknown Date")
     const groupedPhotos = useMemo(() => {
         const groups = new Map<string, LibraryPhoto[]>();
@@ -187,6 +229,13 @@ export const PhotosPage = () => {
                                 <MdDownload /> Download Selected
                             </button>
                             <button
+                                className={`${styles.btnBase} ${styles.assignBtn}`}
+                                onClick={openAssignModal}
+                                disabled={selectedIds.size === 0}
+                            >
+                                Assign to Trip
+                            </button>
+                            <button
                                 className={`${styles.btnBase} ${styles.cancelBtn}`}
                                 onClick={() => {
                                     setIsSelectionMode(false);
@@ -212,6 +261,13 @@ export const PhotosPage = () => {
                                 disabled={isUploading}
                             >
                                 {isUploading ? 'Uploading...' : 'Upload Photos'}
+                            </button>
+                            <button
+                                className={`${styles.btnBase} ${styles.assignBtn}`}
+                                onClick={openAssignModal}
+                                disabled={photos.length === 0}
+                            >
+                                Assign
                             </button>
                             <button
                                 className={`${styles.btnBase} ${styles.selectBtn}`}
@@ -305,6 +361,40 @@ export const PhotosPage = () => {
                     onNavigate={(newIndex) => setLightboxIndex(newIndex)}
                 />
             )}
+
+            <Modal
+                isOpen={isAssignOpen}
+                onClose={() => setIsAssignOpen(false)}
+                title="Assign Photos"
+                actions={
+                    <>
+                        <Button variant="text" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAssign} disabled={!assignTripId}>Assign</Button>
+                    </>
+                }
+            >
+                <div className={styles.assignForm}>
+                    <label>
+                        Trip
+                        <select value={assignTripId ?? ''} onChange={(e) => setAssignTripId(e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">Select a trip</option>
+                            {trips.map(trip => (
+                                <option key={trip.id} value={trip.id}>{trip.name}</option>
+                            ))}
+                        </select>
+                    </label>
+                    <label>
+                        Place (optional)
+                        <select value={assignPlaceId ?? ''} onChange={(e) => setAssignPlaceId(e.target.value ? Number(e.target.value) : null)} disabled={!selectedTrip}>
+                            <option value="">No place</option>
+                            {selectedTrip?.places.map(place => (
+                                <option key={place.id} value={place.id}>{place.name}</option>
+                            ))}
+                        </select>
+                    </label>
+                    <p className={styles.assignInfo}>{assigningIds.length} photo(s) will be assigned.</p>
+                </div>
+            </Modal>
         </div>
     );
 };

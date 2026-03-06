@@ -16,6 +16,8 @@ import { PhotoGrid } from '../components/gallery/PhotoGrid';
 import { Lightbox } from '../components/gallery/Lightbox';
 import { MdDownload } from 'react-icons/md';
 import { Share2 } from 'lucide-react';
+import type { CurrencyOption, Expense } from '../types/models';
+import type { Friend } from '../types/models';
 import { motion } from 'framer-motion';
 import {
     DndContext,
@@ -32,11 +34,13 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { useAuthStore } from '../store/useAuthStore';
 
 export const TripDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { trips, updateTrip: updateTripInStore } = useStore();
+    const user = useAuthStore(s => s.user);
 
     const [trip, setTrip] = useState<Trip | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +58,16 @@ export const TripDetailPage = () => {
 
     // Lightbox State
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+    // Expenses State
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [expenseAmount, setExpenseAmount] = useState('');
+    const [expenseCurrency, setExpenseCurrency] = useState('USD');
+    const [expenseNote, setExpenseNote] = useState('');
+    const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
+    const [friends, setFriends] = useState<Friend[]>([]);
+    const [members, setMembers] = useState<Friend[]>([]);
+    const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
 
     // DnD Sensors
     const sensors = useSensors(
@@ -78,6 +92,20 @@ export const TripDetailPage = () => {
                 const freshData = await api.getTrip(Number(id));
                 setTrip(freshData);
                 updateTripInStore(freshData);
+
+                const [loadedExpenses, loadedCurrencies] = await Promise.all([
+                    api.getExpenses(Number(id)).catch(() => []),
+                    api.getCurrencies().catch(() => []),
+                ]);
+                setExpenses(loadedExpenses);
+                setCurrencies(loadedCurrencies);
+
+                const [friendsData, membersData] = await Promise.all([
+                    api.getFriends().catch(() => []),
+                    api.getTripMembers(Number(id)).catch(() => []),
+                ]);
+                setFriends(friendsData);
+                setMembers(membersData);
             } catch (err) {
                 showSnackbar('Failed to load trip details');
                 navigate('/trips');
@@ -218,6 +246,24 @@ export const TripDetailPage = () => {
         document.body.removeChild(a);
     };
 
+    const handleAddExpense = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!trip || !expenseAmount) return;
+        try {
+            const created = await api.createExpense(trip.id, {
+                amount: parseFloat(expenseAmount),
+                currency: expenseCurrency,
+                note: expenseNote,
+            });
+            setExpenses(prev => [created, ...prev]);
+            setExpenseAmount('');
+            setExpenseNote('');
+            showSnackbar('Expense logged');
+        } catch (err: any) {
+            showSnackbar(`Failed to add expense: ${err.message}`);
+        }
+    };
+
     if (isLoading && !trip) {
         return <div className={styles.loading}>Loading trip data...</div>;
     }
@@ -232,6 +278,33 @@ export const TripDetailPage = () => {
             showSnackbar('Share link copied to clipboard!');
         } catch {
             showSnackbar('Failed to create share link');
+        }
+    };
+
+    const isOwner = user?.id === trip.ownerUserId;
+    const invitedFriendIds = new Set(members.map(m => m.id));
+    const invitables = friends.filter(f => !invitedFriendIds.has(f.id));
+
+    const handleInviteFriend = async () => {
+        if (!selectedFriendId) return;
+        try {
+            await api.inviteTripMember(trip.id, selectedFriendId);
+            const nextMembers = await api.getTripMembers(trip.id);
+            setMembers(nextMembers);
+            setSelectedFriendId(null);
+            showSnackbar('Friend added to trip');
+        } catch (err: any) {
+            showSnackbar(err.message || 'Failed to invite friend');
+        }
+    };
+
+    const handleRemoveMember = async (memberUserId: number) => {
+        try {
+            await api.removeTripMember(trip.id, memberUserId);
+            setMembers(prev => prev.filter(m => m.id !== memberUserId));
+            showSnackbar('Removed trip member');
+        } catch (err: any) {
+            showSnackbar(err.message || 'Failed to remove member');
         }
     };
 
@@ -308,6 +381,81 @@ export const TripDetailPage = () => {
                         <div className={styles.metaRow}>
                             <span className={styles.metaLabel}>Photos</span>
                             <span className={styles.metaValue}>{trip.photos.length} uploaded</span>
+                        </div>
+                    </Card>
+
+                    <Card className={styles.metaCard}>
+                        <h3>Trip Members</h3>
+                        {isOwner && (
+                            <div className={styles.memberInviteRow}>
+                                <select
+                                    value={selectedFriendId ?? ''}
+                                    onChange={(e) => setSelectedFriendId(e.target.value ? Number(e.target.value) : null)}
+                                    className={styles.select}
+                                >
+                                    <option value="">Invite friend...</option>
+                                    {invitables.map(friend => (
+                                        <option key={friend.id} value={friend.id}>{friend.displayName} (@{friend.username})</option>
+                                    ))}
+                                </select>
+                                <Button size="sm" onClick={handleInviteFriend} disabled={!selectedFriendId}>Invite</Button>
+                            </div>
+                        )}
+                        <div className={styles.memberList}>
+                            {members.length === 0 && <p className={styles.helperText}>No invited members yet.</p>}
+                            {members.map(member => (
+                                <div className={styles.memberRow} key={member.id}>
+                                    <span>{member.displayName} (@{member.username})</span>
+                                    {isOwner && (
+                                        <Button size="sm" variant="text" onClick={() => handleRemoveMember(member.id)}>
+                                            Remove
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card className={styles.metaCard}>
+                        <h3>Expenses</h3>
+                        <form onSubmit={handleAddExpense} className={styles.form}>
+                            <Input
+                                label="Amount"
+                                type="number"
+                                step="0.01"
+                                value={expenseAmount}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExpenseAmount(e.target.value)}
+                                required
+                                fullWidth
+                            />
+                            <div className={styles.coordRow}>
+                                <select
+                                    value={expenseCurrency}
+                                    onChange={(e) => setExpenseCurrency(e.target.value)}
+                                    className={styles.select}
+                                >
+                                    {(currencies.length > 0 ? currencies : [{ code: 'USD', name: 'US Dollar' }]).map(c => (
+                                        <option key={c.code} value={c.code}>{c.code}</option>
+                                    ))}
+                                </select>
+                                <Input
+                                    label="Note"
+                                    value={expenseNote}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExpenseNote(e.target.value)}
+                                    placeholder="e.g. Lunch"
+                                    fullWidth
+                                />
+                            </div>
+                            <Button size="sm" type="submit">Add Expense</Button>
+                        </form>
+                        <div className={styles.expenseList}>
+                            {expenses.slice(0, 5).map(exp => (
+                                <div key={exp.id} className={styles.metaRow}>
+                                    <span className={styles.metaLabel}>{exp.note || 'Expense'} ({exp.amount} {exp.currency})</span>
+                                    <span className={styles.metaValue}>{exp.amountHome} {exp.homeCurrency}</span>
+                                </div>
+                            ))}
+                            {expenses.length === 0 && <p className={styles.helperText}>No expenses logged yet.</p>}
                         </div>
                     </Card>
 

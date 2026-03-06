@@ -202,3 +202,35 @@
 .uploadBtn:hover:not(:disabled) {
     box-shadow: var(--md-sys-elevation-1);
 }
+
+.assignBtn {
+    background-color: var(--md-sys-color-tertiary-container);
+    color: var(--md-sys-color-on-tertiary-container);
+}
+
+.assignForm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.assignForm label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.assignForm select {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+
+.assignInfo {
+    margin: 0;
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+}

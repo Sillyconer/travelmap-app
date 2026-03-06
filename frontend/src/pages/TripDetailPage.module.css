@@ -215,6 +215,41 @@
     gap: var(--md-sys-spacing-16);
 }
 
+.select {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    border-radius: var(--md-sys-shape-corner-small);
+    padding: 10px;
+    min-width: 120px;
+}
+
+.expenseList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.memberInviteRow {
+    display: flex;
+    gap: 10px;
+}
+
+.memberList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.memberRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-small);
+    padding: 8px 10px;
+}
+
 .helperText {
     color: var(--md-sys-color-on-surface-variant);
     font-size: var(--md-sys-typescale-body-small-size);

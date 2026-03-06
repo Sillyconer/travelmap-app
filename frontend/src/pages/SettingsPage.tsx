@@ -4,16 +4,50 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import styles from './SettingsPage.module.css';
 import { MdMap, MdAttachMoney } from 'react-icons/md';
+import { useEffect, useMemo, useState } from 'react';
+import * as api from '../api/client';
+import type { CurrencyOption } from '../types/models';
 import { useNavigate } from 'react-router-dom';
 
 export const SettingsPage = () => {
     const { currency, mapStyle, setCurrency, setMapStyle } = useSettingsStore();
     const logout = useAuthStore(s => s.logout);
+    const user = useAuthStore(s => s.user);
+    const updateProfile = useAuthStore(s => s.updateProfile);
     const navigate = useNavigate();
+    const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
+    const [homeCountry, setHomeCountry] = useState(user?.homeCountry ?? '');
+
+    const flag = useMemo(() => {
+        const code = (homeCountry || '').trim().toUpperCase();
+        if (code.length !== 2) return '';
+        return String.fromCodePoint(...[...code].map((c) => 127397 + c.charCodeAt(0)));
+    }, [homeCountry]);
+
+    useEffect(() => {
+        const loadCurrencies = async () => {
+            try {
+                const data = await api.getCurrencies();
+                setCurrencies(data);
+            } catch {
+                setCurrencies([]);
+            }
+        };
+        loadCurrencies();
+    }, []);
 
     const handleLogout = () => {
         logout();
         navigate('/login', { replace: true });
+    };
+
+    const handleHomeCurrency = async (value: string) => {
+        setCurrency(value);
+        await updateProfile({ homeCurrency: value });
+    };
+
+    const handleHomeCountryBlur = async () => {
+        await updateProfile({ homeCountry });
     };
 
     return (
@@ -53,21 +87,33 @@ export const SettingsPage = () => {
                                 <h3>Global Currency</h3>
                                 <p>Set the primary currency used for displaying trip budgets and expenses.</p>
                             </div>
-                            <select
-                                value={currency}
-                                onChange={(e) => setCurrency(e.target.value)}
-                                className={styles.select}
-                            >
-                                <option value="USD">USD ($)</option>
-                                <option value="EUR">EUR (€)</option>
-                                <option value="GBP">GBP (£)</option>
-                                <option value="JPY">JPY (¥)</option>
-                                <option value="AUD">AUD ($)</option>
-                                <option value="CAD">CAD ($)</option>
-                                <option value="CHF">CHF (Fr)</option>
-                                <option value="CNY">CNY (¥)</option>
-                                <option value="INR">INR (₹)</option>
+                            <select value={currency} onChange={(e) => handleHomeCurrency(e.target.value)} className={styles.select}>
+                                {(currencies.length > 0 ? currencies : [{ code: 'USD', name: 'US Dollar' }]).map((c) => (
+                                    <option key={c.code} value={c.code}>{c.code} ({c.name})</option>
+                                ))}
                             </select>
+                        </div>
+                    </Card>
+                </section>
+
+                <section className={styles.section}>
+                    <Card className={styles.settingsCard}>
+                        <div className={styles.settingRow}>
+                            <div className={styles.settingInfo}>
+                                <h3>Home Country</h3>
+                                <p>Used for profile and travel context (2-letter code).</p>
+                            </div>
+                            <div className={styles.countryRow}>
+                                <input
+                                    className={styles.countryInput}
+                                    value={homeCountry}
+                                    maxLength={2}
+                                    onChange={(e) => setHomeCountry(e.target.value.toUpperCase())}
+                                    onBlur={handleHomeCountryBlur}
+                                    placeholder="US"
+                                />
+                                <span className={styles.flag}>{flag}</span>
+                            </div>
                         </div>
                     </Card>
                 </section>

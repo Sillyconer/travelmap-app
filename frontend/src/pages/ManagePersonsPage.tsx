@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { usePersons } from '../features/persons/usePersons';
+import { showSnackbar } from '../components/ui/Snackbar';
+import * as api from '../api/client';
+import type { Friend, FriendRequest } from '../types/models';
 import styles from './ManagePersonsPage.module.css';
 
 export const ManagePersonsPage = () => {
@@ -23,9 +26,27 @@ export const ManagePersonsPage = () => {
     const [editName, setEditName] = useState('');
     const [editColor, setEditColor] = useState('#4A90D9');
 
+    const [friendUsername, setFriendUsername] = useState('');
+    const [friends, setFriends] = useState<Friend[]>([]);
+    const [requests, setRequests] = useState<FriendRequest[]>([]);
+
     const owner = persons.find(p => p.isOwner);
     const companions = persons.filter(p => !p.isOwner);
     const sortedPersons = owner ? [owner, ...companions] : persons;
+
+    const loadSocial = async () => {
+        try {
+            const [friendsData, requestsData] = await Promise.all([api.getFriends(), api.getFriendRequests()]);
+            setFriends(friendsData);
+            setRequests(requestsData);
+        } catch {
+            // ignore
+        }
+    };
+
+    useEffect(() => {
+        loadSocial();
+    }, []);
 
     const openEditModal = (person: (typeof persons)[number]) => {
         setEditingPerson(person.id);
@@ -72,6 +93,27 @@ export const ManagePersonsPage = () => {
         }
     };
 
+    const handleSendFriendRequest = async () => {
+        if (!friendUsername.trim()) return;
+        try {
+            await api.sendFriendRequest(friendUsername.trim());
+            setFriendUsername('');
+            showSnackbar('Friend request sent');
+        } catch (err: any) {
+            showSnackbar(err.message || 'Failed to send request');
+        }
+    };
+
+    const handleAcceptRequest = async (requestId: number) => {
+        try {
+            await api.acceptFriendRequest(requestId);
+            showSnackbar('Friend request accepted');
+            await loadSocial();
+        } catch {
+            showSnackbar('Failed to accept request');
+        }
+    };
+
     return (
         <div className={styles.container}>
             <header className={styles.header}>
@@ -81,6 +123,30 @@ export const ManagePersonsPage = () => {
                 </div>
                 <Button onClick={() => setIsCreateOpen(true)}>+ Add Person</Button>
             </header>
+
+            <section className={styles.socialSection}>
+                <Card className={styles.socialCard}>
+                    <h3>Friends</h3>
+                    <div className={styles.friendRow}>
+                        <Input label="Add by username" value={friendUsername} onChange={e => setFriendUsername(e.target.value)} fullWidth />
+                        <Button onClick={handleSendFriendRequest}>Send Request</Button>
+                    </div>
+                    {requests.length > 0 && (
+                        <div className={styles.requestList}>
+                            <h4>Incoming Requests</h4>
+                            {requests.map(req => (
+                                <div key={req.id} className={styles.requestItem}>
+                                    <span>{req.fromDisplayName || req.fromUsername} (@{req.fromUsername})</span>
+                                    <Button size="sm" onClick={() => handleAcceptRequest(req.id)}>Accept</Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {friends.length > 0 && (
+                        <p className={styles.friendCount}>{friends.length} friend(s) will automatically appear in your people list.</p>
+                    )}
+                </Card>
+            </section>
 
             {isLoading && persons.length === 0 ? (
                 <div className={styles.loading}>Loading people...</div>

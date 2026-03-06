@@ -124,3 +124,23 @@
         width: 100%;
     }
 }
+
+.countryRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.countryInput {
+    width: 70px;
+    padding: var(--md-sys-spacing-8) var(--md-sys-spacing-12);
+    border-radius: var(--md-sys-shape-corner-small);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background-color: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    text-transform: uppercase;
+}
+
+.flag {
+    font-size: 22px;
+}
