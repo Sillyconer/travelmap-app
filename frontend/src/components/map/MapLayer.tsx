@@ -6,55 +6,84 @@ import { useEffect } from 'react';
 import { TripMarkers } from './TripMarkers';
 import { TripPolylines } from './TripPolylines';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import type { MapStyle } from '../../store/useSettingsStore';
 import styles from './MapLayer.module.css';
 
-const TILE_PROVIDERS = {
+type TileSpec = {
+    url: string;
+    className?: string;
+    opacity?: number;
+};
+
+type StyleSpec = {
+    backgroundColor: string;
+    attribution: string;
+    layers: TileSpec[];
+};
+
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const CARTO_ATTRIBUTION = `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`;
+const TOPO_ATTRIBUTION = 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>';
+
+const MAP_STYLE_SPECS: Record<MapStyle, StyleSpec> = {
     'dark-matter': {
-        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        className: '',
+        backgroundColor: '#0e1013',
+        attribution: CARTO_ATTRIBUTION,
+        layers: [{ url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' }],
     },
     positron: {
-        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        className: '',
+        backgroundColor: '#f4f6fa',
+        attribution: CARTO_ATTRIBUTION,
+        layers: [{ url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' }],
     },
     voyager: {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        className: '',
+        backgroundColor: '#f2efea',
+        attribution: CARTO_ATTRIBUTION,
+        layers: [{ url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' }],
     },
     'voyager-nolabels': {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        className: '',
+        backgroundColor: '#ece9e2',
+        attribution: CARTO_ATTRIBUTION,
+        layers: [{ url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png' }],
     },
     'osm-standard': {
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        className: '',
+        backgroundColor: '#dfe9f1',
+        attribution: OSM_ATTRIBUTION,
+        layers: [{ url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' }],
     },
     terrain: {
-        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-        attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
-        className: '',
+        backgroundColor: '#d7c8ad',
+        attribution: TOPO_ATTRIBUTION,
+        layers: [{ url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png' }],
     },
     'oceanic-deep': {
-        url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        className: 'tile-filter-oceanic-deep',
+        backgroundColor: '#081826',
+        attribution: CARTO_ATTRIBUTION,
+        layers: [
+            { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-base' },
+            { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-water', opacity: 0.6 },
+            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-labels', opacity: 0.55 },
+        ],
     },
     'voyager-neo': {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        className: 'tile-filter-voyager-neo',
+        backgroundColor: '#2a1b33',
+        attribution: CARTO_ATTRIBUTION,
+        layers: [
+            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-voyager-base' },
+            { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', className: 'tile-voyager-desert', opacity: 0.24 },
+            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-voyager-labels', opacity: 0.88 },
+        ],
     },
     'pine-earth': {
-        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        className: 'tile-filter-pine-earth',
+        backgroundColor: '#0f1d15',
+        attribution: TOPO_ATTRIBUTION,
+        layers: [
+            { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', className: 'tile-pine-base' },
+            { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-pine-water', opacity: 0.38 },
+            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-pine-labels', opacity: 0.75 },
+        ],
     },
-} as const;
+};
 
 // Fix for default Leaflet icons in Webpack/Vite
 import L from 'leaflet';
@@ -86,10 +115,10 @@ export const MapLayer = () => {
         : trips;
 
     const visibleTrips = tripsAfterPersonFilter.filter(trip => visibleTripIds.has(trip.id));
-    const tileProvider = TILE_PROVIDERS[mapStyle] ?? TILE_PROVIDERS['dark-matter'];
+    const styleSpec = MAP_STYLE_SPECS[mapStyle] ?? MAP_STYLE_SPECS['dark-matter'];
 
     return (
-        <div className={styles.mapWrapper}>
+        <div className={styles.mapWrapper} style={{ '--map-background': styleSpec.backgroundColor } as Record<string, string>}>
             <MapContainer
                 center={[20, 0]}
                 zoom={3}
@@ -99,11 +128,15 @@ export const MapLayer = () => {
                 className={styles.map}
                 zoomControl={false}
             >
-                <TileLayer
-                    attribution={tileProvider.attribution}
-                    url={tileProvider.url}
-                    className={tileProvider.className}
-                />
+                {styleSpec.layers.map((layer, index) => (
+                    <TileLayer
+                        key={`${mapStyle}-${index}`}
+                        attribution={index === 0 ? styleSpec.attribution : ''}
+                        url={layer.url}
+                        className={layer.className}
+                        opacity={layer.opacity ?? 1}
+                    />
+                ))}
 
                 <TripPolylines trips={visibleTrips} />
                 <TripMarkers trips={visibleTrips} />

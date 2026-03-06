@@ -8,29 +8,45 @@
 .map {
     width: 100%;
     height: 100%;
-    background-color: var(--md-sys-color-surface-container-low, #1e1e1e);
+    background-color: var(--map-background, var(--md-sys-color-surface-container-low, #1e1e1e));
 }
 
-.map :global(.leaflet-tile.tile-filter-oceanic-deep) {
-    filter: saturate(1.45) hue-rotate(18deg) contrast(1.22) brightness(0.76);
+.map :global(.leaflet-tile.tile-oceanic-base) {
+    filter: saturate(1.25) hue-rotate(175deg) brightness(0.45) contrast(1.28);
 }
 
-.map :global(.leaflet-tile.tile-filter-voyager-neo) {
-    filter: saturate(1.75) hue-rotate(248deg) contrast(1.08) brightness(0.92);
+.map :global(.leaflet-tile.tile-oceanic-water) {
+    filter: saturate(2.1) hue-rotate(195deg) brightness(0.6) contrast(1.18);
+    mix-blend-mode: screen;
 }
 
-.map :global(.leaflet-tile.tile-filter-pine-earth) {
-    filter: saturate(1.2) hue-rotate(88deg) contrast(1.15) brightness(0.8);
+.map :global(.leaflet-tile.tile-oceanic-labels) {
+    filter: saturate(0.5) brightness(1.15) contrast(0.95);
+    mix-blend-mode: lighten;
 }
 
-:global(:root[data-theme='oceanic']) .map {
-    background-color: #0b1d2b;
+.map :global(.leaflet-tile.tile-voyager-base) {
+    filter: saturate(1.95) hue-rotate(232deg) brightness(0.84) contrast(1.16);
 }
 
-:global(:root[data-theme='voyager']) .map {
-    background-color: #2a1e33;
+.map :global(.leaflet-tile.tile-voyager-desert) {
+    filter: saturate(1.9) hue-rotate(336deg) brightness(0.9) contrast(1.2);
+    mix-blend-mode: soft-light;
 }
 
-:global(:root[data-theme='pine-trail']) .map {
-    background-color: #152316;
+.map :global(.leaflet-tile.tile-voyager-labels) {
+    filter: saturate(0.6) brightness(0.9) contrast(1.15);
+}
+
+.map :global(.leaflet-tile.tile-pine-base) {
+    filter: saturate(1.22) hue-rotate(64deg) brightness(0.72) contrast(1.2);
+}
+
+.map :global(.leaflet-tile.tile-pine-water) {
+    filter: saturate(1.8) hue-rotate(188deg) brightness(0.55) contrast(1.22);
+    mix-blend-mode: multiply;
+}
+
+.map :global(.leaflet-tile.tile-pine-labels) {
+    filter: saturate(0.5) brightness(0.93) contrast(1.1);
 }
