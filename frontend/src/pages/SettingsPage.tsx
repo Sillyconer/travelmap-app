@@ -9,7 +9,6 @@ import { useEffect, useMemo, useState } from 'react';
 import * as api from '../api/client';
 import type { CurrencyOption } from '../types/models';
 import { useNavigate } from 'react-router-dom';
-import type { MapStyle } from '../store/useSettingsStore';
 
 const UI_THEMES = [
     {
@@ -50,18 +49,6 @@ const UI_THEMES = [
     },
 ] as const;
 
-const MAP_STYLE_OPTIONS: Array<{ id: MapStyle; label: string }> = [
-    { id: 'dark-matter', label: 'Dark Matter' },
-    { id: 'positron', label: 'Positron (Light)' },
-    { id: 'voyager', label: 'Voyager (Colorful)' },
-    { id: 'voyager-neo', label: 'Voyager Neo (Theme-Matched)' },
-    { id: 'oceanic-deep', label: 'Oceanic Deep (Theme-Matched)' },
-    { id: 'pine-earth', label: 'Pine Earth (Theme-Matched)' },
-    { id: 'voyager-nolabels', label: 'Voyager No Labels' },
-    { id: 'osm-standard', label: 'OSM Standard' },
-    { id: 'terrain', label: 'Terrain (Topo)' },
-];
-
 const COUNTRY_TO_CURRENCY: Record<string, string> = {
     US: 'USD', CA: 'CAD', MX: 'MXN', BR: 'BRL', AR: 'ARS',
     GB: 'GBP', IE: 'EUR', FR: 'EUR', DE: 'EUR', ES: 'EUR', IT: 'EUR', PT: 'EUR', NL: 'EUR', BE: 'EUR', AT: 'EUR', FI: 'EUR',
@@ -73,7 +60,7 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
 type UiThemeId = (typeof UI_THEMES)[number]['id'];
 
 export const SettingsPage = () => {
-    const { currency, mapStyle, uiTheme, setCurrency, setMapStyle, setUiTheme } = useSettingsStore();
+    const { currency, uiTheme, setCurrency, setUiTheme } = useSettingsStore();
     const logout = useAuthStore(s => s.logout);
     const user = useAuthStore(s => s.user);
     const updateProfile = useAuthStore(s => s.updateProfile);
@@ -136,40 +123,8 @@ export const SettingsPage = () => {
                     <Card className={styles.settingsCard}>
                         <div className={styles.settingRow}>
                             <div className={styles.settingInfo}>
-                                <h3>Map Style</h3>
-                                <p>Choose the visual style for the main world map.</p>
-                            </div>
-                            <select
-                                value={mapStyle}
-                                onChange={(e) => setMapStyle(e.target.value as MapStyle)}
-                                className={styles.select}
-                            >
-                                {MAP_STYLE_OPTIONS.map(option => (
-                                    <option key={option.id} value={option.id}>{option.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </Card>
-                </section>
-
-                <section className={styles.section}>
-                    <h2 className={styles.sectionTitle}><MdAttachMoney className={styles.icon} /> Currency & Formatting</h2>
-                    <Card className={styles.settingsCard}>
-                        <div className={styles.settingRow}>
-                            <div className={styles.settingInfo}>
-                                <h3>Global Currency</h3>
-                                <p>Set the primary currency used for displaying trip budgets and expenses.</p>
-                            </div>
-                            <select value={currency} onChange={(e) => handleHomeCurrency(e.target.value)} className={styles.select}>
-                                {(currencies.length > 0 ? currencies : [{ code: 'USD', name: 'US Dollar' }]).map((c) => (
-                                    <option key={c.code} value={c.code}>{c.code} ({c.name})</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className={styles.settingRow}>
-                            <div className={styles.settingInfo}>
-                                <h3>UI Color Style</h3>
-                                <p>Pick a full-app color palette independent from map tiles.</p>
+                                <h3>Theme</h3>
+                                <p>Choose one of the 6 themes. Each controls both UI and map.</p>
                             </div>
                             <select
                                 value={uiTheme}
@@ -204,6 +159,23 @@ export const SettingsPage = () => {
                             </button>
                         ))}
                     </div>
+                </section>
+
+                <section className={styles.section}>
+                    <h2 className={styles.sectionTitle}><MdAttachMoney className={styles.icon} /> Currency & Formatting</h2>
+                    <Card className={styles.settingsCard}>
+                        <div className={styles.settingRow}>
+                            <div className={styles.settingInfo}>
+                                <h3>Global Currency</h3>
+                                <p>Set the primary currency used for displaying trip budgets and expenses.</p>
+                            </div>
+                            <select value={currency} onChange={(e) => handleHomeCurrency(e.target.value)} className={styles.select}>
+                                {(currencies.length > 0 ? currencies : [{ code: 'USD', name: 'US Dollar' }]).map((c) => (
+                                    <option key={c.code} value={c.code}>{c.code} ({c.name})</option>
+                                ))}
+                            </select>
+                        </div>
+                    </Card>
                 </section>
 
                 <section className={styles.section}>
