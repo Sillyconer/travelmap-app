@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { showSnackbar } from '../components/ui/Snackbar';
@@ -12,6 +13,7 @@ const toTime = (createdAt: string) => {
 };
 
 export const NotificationsPage = () => {
+    const navigate = useNavigate();
     const [items, setItems] = useState<NotificationItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,6 +62,42 @@ export const NotificationsPage = () => {
         }
     };
 
+    const routeForNotification = (item: NotificationItem): string | null => {
+        const payload = item.payload as Record<string, unknown>;
+        const tripId = payload.tripId;
+        if (typeof tripId === 'number') {
+            return `/trips/${tripId}`;
+        }
+
+        const username = payload.username;
+        if (typeof username === 'string' && username.trim()) {
+            return `/profiles/${username}`;
+        }
+
+        const fromUsername = payload.fromUsername;
+        if (typeof fromUsername === 'string' && fromUsername.trim()) {
+            return `/profiles/${fromUsername}`;
+        }
+
+        if (item.type === 'friend_request_received' || item.type === 'friend_request_accepted') {
+            return '/people';
+        }
+
+        return null;
+    };
+
+    const openNotificationTarget = async (item: NotificationItem) => {
+        const route = routeForNotification(item);
+        if (!route) {
+            showSnackbar('No destination for this notification');
+            return;
+        }
+        if (!item.isRead) {
+            await markOneRead(item.id);
+        }
+        navigate(route);
+    };
+
     return (
         <div className={styles.page}>
             <div className={styles.header}>
@@ -96,9 +134,12 @@ export const NotificationsPage = () => {
                             </div>
                             <div className={styles.itemFoot}>
                                 <span className={styles.type}>{item.type}</span>
-                                {!item.isRead && (
-                                    <Button onClick={() => markOneRead(item.id)} disabled={isSubmitting}>Mark read</Button>
-                                )}
+                                <div className={styles.inlineActions}>
+                                    <Button onClick={() => openNotificationTarget(item)} disabled={isSubmitting}>Open</Button>
+                                    {!item.isRead && (
+                                        <Button onClick={() => markOneRead(item.id)} disabled={isSubmitting}>Mark read</Button>
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     ))}
