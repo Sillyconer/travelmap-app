@@ -716,59 +716,63 @@ export const TripDetailPage = () => {
 
                     <Card className={styles.metaCard}>
                         <h3>Day Plan</h3>
-                        <form onSubmit={handleAddPlanItem} className={styles.form}>
-                            <Input
-                                label="Title"
-                                value={planTitle}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanTitle(e.target.value)}
-                                placeholder="e.g. Sunrise walk"
-                                fullWidth
-                            />
-                            <div className={styles.coordRow}>
+                        {canEdit ? (
+                            <form onSubmit={handleAddPlanItem} className={styles.form}>
                                 <Input
-                                    label="Day"
-                                    type="number"
-                                    min="1"
-                                    value={planDayIndex}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanDayIndex(e.target.value)}
+                                    label="Title"
+                                    value={planTitle}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanTitle(e.target.value)}
+                                    placeholder="e.g. Sunrise walk"
                                     fullWidth
                                 />
-                                <Input
-                                    label="Start"
-                                    value={planStartAt}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanStartAt(e.target.value)}
-                                    placeholder="09:00"
-                                    fullWidth
-                                />
-                                <Input
-                                    label="End"
-                                    value={planEndAt}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanEndAt(e.target.value)}
-                                    placeholder="11:00"
-                                    fullWidth
-                                />
-                            </div>
-                            <div className={styles.coordRow}>
-                                <select
-                                    value={planPlaceId ?? ''}
-                                    onChange={e => setPlanPlaceId(e.target.value ? Number(e.target.value) : null)}
-                                    className={styles.select}
-                                >
-                                    <option value="">No linked place</option>
-                                    {trip.places.map(place => (
-                                        <option key={`plan-place-${place.id}`} value={place.id}>{place.name}</option>
-                                    ))}
-                                </select>
-                                <Input
-                                    label="Note"
-                                    value={planNote}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanNote(e.target.value)}
-                                    placeholder="Optional"
-                                    fullWidth
-                                />
-                            </div>
-                            {canEdit && <Button size="sm" type="submit" disabled={!planTitle.trim()}>Add Plan Item</Button>}
-                        </form>
+                                <div className={styles.coordRow}>
+                                    <Input
+                                        label="Day"
+                                        type="number"
+                                        min="1"
+                                        value={planDayIndex}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanDayIndex(e.target.value)}
+                                        fullWidth
+                                    />
+                                    <Input
+                                        label="Start"
+                                        value={planStartAt}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanStartAt(e.target.value)}
+                                        placeholder="09:00"
+                                        fullWidth
+                                    />
+                                    <Input
+                                        label="End"
+                                        value={planEndAt}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanEndAt(e.target.value)}
+                                        placeholder="11:00"
+                                        fullWidth
+                                    />
+                                </div>
+                                <div className={styles.coordRow}>
+                                    <select
+                                        value={planPlaceId ?? ''}
+                                        onChange={e => setPlanPlaceId(e.target.value ? Number(e.target.value) : null)}
+                                        className={styles.select}
+                                    >
+                                        <option value="">No linked place</option>
+                                        {trip.places.map(place => (
+                                            <option key={`plan-place-${place.id}`} value={place.id}>{place.name}</option>
+                                        ))}
+                                    </select>
+                                    <Input
+                                        label="Note"
+                                        value={planNote}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPlanNote(e.target.value)}
+                                        placeholder="Optional"
+                                        fullWidth
+                                    />
+                                </div>
+                                <Button size="sm" type="submit" disabled={!planTitle.trim()}>Add Plan Item</Button>
+                            </form>
+                        ) : (
+                            <p className={styles.helperText}>Viewer access: day plan edits are disabled.</p>
+                        )}
                         <div className={styles.expenseList}>
                             {itineraryItems.length === 0 && <p className={styles.helperText}>No plan items yet.</p>}
                             {itineraryByDay.map(([dayIndex, dayItems]) => (
@@ -798,89 +802,93 @@ export const TripDetailPage = () => {
 
                     <Card className={styles.metaCard}>
                         <h3>Expenses</h3>
-                        <form onSubmit={handleAddExpense} className={styles.form}>
-                            <Input
-                                label="Amount"
-                                type="number"
-                                step="0.01"
-                                value={expenseAmount}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExpenseAmount(e.target.value)}
-                                required
-                                fullWidth
-                            />
-                            <div className={styles.coordRow}>
-                                <select
-                                    value={expenseCurrency}
-                                    onChange={(e) => setExpenseCurrency(e.target.value)}
-                                    className={styles.select}
-                                >
-                                    {(currencies.length > 0 ? currencies : [{ code: 'USD', name: 'US Dollar' }]).map(c => (
-                                        <option key={c.code} value={c.code}>{c.code}</option>
-                                    ))}
-                                </select>
+                        {canEdit ? (
+                            <form onSubmit={handleAddExpense} className={styles.form}>
                                 <Input
-                                    label="Note"
-                                    value={expenseNote}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExpenseNote(e.target.value)}
-                                    placeholder="e.g. Lunch"
+                                    label="Amount"
+                                    type="number"
+                                    step="0.01"
+                                    value={expenseAmount}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExpenseAmount(e.target.value)}
+                                    required
                                     fullWidth
                                 />
-                            </div>
-                            <div className={styles.coordRow}>
-                                <select
-                                    value={expenseSplitMode}
-                                    onChange={(e) => setExpenseSplitMode(e.target.value as 'equal' | 'custom_amount')}
-                                    className={styles.select}
-                                >
-                                    <option value="equal">Split equally</option>
-                                    <option value="custom_amount">Exact amounts</option>
-                                </select>
-                            </div>
-                            <div className={styles.expenseParticipants}>
-                                {tripExpenseParticipants.map(participant => {
-                                    const checked = expenseParticipantIds.includes(participant.id);
-                                    return (
-                                        <label key={`expense-participant-${participant.id}`} className={styles.checkboxChip}>
-                                            <input
-                                                type="checkbox"
-                                                checked={checked}
-                                                onChange={() => toggleExpenseParticipant(participant.id)}
-                                            />
-                                            <span>{participant.name}</span>
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                            {expenseSplitMode === 'custom_amount' && (
-                                <div className={styles.customSplitGrid}>
-                                    {expenseParticipantIds.map(participantId => {
-                                        const participant = tripExpenseParticipants.find(p => p.id === participantId);
-                                        if (!participant) {
-                                            return null;
-                                        }
+                                <div className={styles.coordRow}>
+                                    <select
+                                        value={expenseCurrency}
+                                        onChange={(e) => setExpenseCurrency(e.target.value)}
+                                        className={styles.select}
+                                    >
+                                        {(currencies.length > 0 ? currencies : [{ code: 'USD', name: 'US Dollar' }]).map(c => (
+                                            <option key={c.code} value={c.code}>{c.code}</option>
+                                        ))}
+                                    </select>
+                                    <Input
+                                        label="Note"
+                                        value={expenseNote}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExpenseNote(e.target.value)}
+                                        placeholder="e.g. Lunch"
+                                        fullWidth
+                                    />
+                                </div>
+                                <div className={styles.coordRow}>
+                                    <select
+                                        value={expenseSplitMode}
+                                        onChange={(e) => setExpenseSplitMode(e.target.value as 'equal' | 'custom_amount')}
+                                        className={styles.select}
+                                    >
+                                        <option value="equal">Split equally</option>
+                                        <option value="custom_amount">Exact amounts</option>
+                                    </select>
+                                </div>
+                                <div className={styles.expenseParticipants}>
+                                    {tripExpenseParticipants.map(participant => {
+                                        const checked = expenseParticipantIds.includes(participant.id);
                                         return (
-                                            <Input
-                                                key={`custom-share-${participant.id}`}
-                                                label={`${participant.name} amount (${expenseCurrency})`}
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={expenseCustomShares[participant.id] ?? ''}
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                                    const value = e.target.value;
-                                                    setExpenseCustomShares(prev => ({ ...prev, [participant.id]: value }));
-                                                }}
-                                                fullWidth
-                                            />
+                                            <label key={`expense-participant-${participant.id}`} className={styles.checkboxChip}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={() => toggleExpenseParticipant(participant.id)}
+                                                />
+                                                <span>{participant.name}</span>
+                                            </label>
                                         );
                                     })}
-                                    <p className={Math.abs(customSplitRemaining) <= 0.01 ? styles.helperText : styles.warnText}>
-                                        Remaining: {customSplitRemaining.toFixed(2)} {expenseCurrency}
-                                    </p>
                                 </div>
-                            )}
-                            {canEdit && <Button size="sm" type="submit" disabled={!canSubmitExpense}>Add Expense</Button>}
-                        </form>
+                                {expenseSplitMode === 'custom_amount' && (
+                                    <div className={styles.customSplitGrid}>
+                                        {expenseParticipantIds.map(participantId => {
+                                            const participant = tripExpenseParticipants.find(p => p.id === participantId);
+                                            if (!participant) {
+                                                return null;
+                                            }
+                                            return (
+                                                <Input
+                                                    key={`custom-share-${participant.id}`}
+                                                    label={`${participant.name} amount (${expenseCurrency})`}
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={expenseCustomShares[participant.id] ?? ''}
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                        const value = e.target.value;
+                                                        setExpenseCustomShares(prev => ({ ...prev, [participant.id]: value }));
+                                                    }}
+                                                    fullWidth
+                                                />
+                                            );
+                                        })}
+                                        <p className={Math.abs(customSplitRemaining) <= 0.01 ? styles.helperText : styles.warnText}>
+                                            Remaining: {customSplitRemaining.toFixed(2)} {expenseCurrency}
+                                        </p>
+                                    </div>
+                                )}
+                                <Button size="sm" type="submit" disabled={!canSubmitExpense}>Add Expense</Button>
+                            </form>
+                        ) : (
+                            <p className={styles.helperText}>Viewer access: adding expenses is disabled.</p>
+                        )}
                         <div className={styles.expenseList}>
                             {expenses.slice(0, 5).map(exp => (
                                 <div key={exp.id} className={styles.metaRow}>
