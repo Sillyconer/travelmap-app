@@ -9,8 +9,49 @@ import * as api from '../api/client';
 import type { CurrencyOption } from '../types/models';
 import { useNavigate } from 'react-router-dom';
 
+const UI_THEMES = [
+    {
+        id: 'dark-matter',
+        label: 'Dark Matter',
+        vibe: 'Warm journal',
+        colors: ['#121110', '#F0C75E', '#A8CEA8'],
+    },
+    {
+        id: 'positron',
+        label: 'Positron',
+        vibe: 'Clean cartography',
+        colors: ['#FAFAF8', '#2C3E6D', '#266D78'],
+    },
+    {
+        id: 'voyager',
+        label: 'Voyager',
+        vibe: 'Vibrant explorer',
+        colors: ['#1A1820', '#FF7F6E', '#75D8C6'],
+    },
+    {
+        id: 'oceanic',
+        label: 'Oceanic',
+        vibe: 'Deep maritime',
+        colors: ['#0F1722', '#5DB7FF', '#6EE7D8'],
+    },
+    {
+        id: 'atlas-sand',
+        label: 'Atlas Sand',
+        vibe: 'Sunlit atlas',
+        colors: ['#F6F2EA', '#8A5A3B', '#3F6C5B'],
+    },
+    {
+        id: 'pine-trail',
+        label: 'Pine Trail',
+        vibe: 'Forest expedition',
+        colors: ['#121A15', '#86C06C', '#D2B979'],
+    },
+] as const;
+
+type UiThemeId = (typeof UI_THEMES)[number]['id'];
+
 export const SettingsPage = () => {
-    const { currency, mapStyle, setCurrency, setMapStyle } = useSettingsStore();
+    const { currency, mapStyle, uiTheme, setCurrency, setMapStyle, setUiTheme } = useSettingsStore();
     const logout = useAuthStore(s => s.logout);
     const user = useAuthStore(s => s.user);
     const updateProfile = useAuthStore(s => s.updateProfile);
@@ -93,7 +134,44 @@ export const SettingsPage = () => {
                                 ))}
                             </select>
                         </div>
+                        <div className={styles.settingRow}>
+                            <div className={styles.settingInfo}>
+                                <h3>UI Color Style</h3>
+                                <p>Pick a full-app color palette independent from map tiles.</p>
+                            </div>
+                            <select
+                                value={uiTheme}
+                                onChange={(e) => setUiTheme(e.target.value as UiThemeId)}
+                                className={styles.select}
+                            >
+                                {UI_THEMES.map(theme => (
+                                    <option key={theme.id} value={theme.id}>{theme.label}</option>
+                                ))}
+                            </select>
+                        </div>
                     </Card>
+
+                    <div className={styles.paletteGrid}>
+                        {UI_THEMES.map(theme => (
+                            <button
+                                key={theme.id}
+                                className={`${styles.paletteCard} ${uiTheme === theme.id ? styles.paletteCardActive : ''}`}
+                                onClick={() => setUiTheme(theme.id)}
+                                type="button"
+                            >
+                                <div className={styles.paletteTop}>
+                                    <strong>{theme.label}</strong>
+                                    <span>{theme.vibe}</span>
+                                </div>
+                                <div className={styles.swatches}>
+                                    {theme.colors.map((color) => (
+                                        <span key={color} className={styles.swatch} style={{ backgroundColor: color }} title={color} />
+                                    ))}
+                                </div>
+                                <p className={styles.hexRow}>{theme.colors.join(' · ')}</p>
+                            </button>
+                        ))}
+                    </div>
                 </section>
 
                 <section className={styles.section}>

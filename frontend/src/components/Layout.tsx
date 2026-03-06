@@ -13,11 +13,11 @@ import styles from './Layout.module.css';
  */
 export const Layout = () => {
     const location = useLocation();
-    const mapStyle = useSettingsStore(s => s.mapStyle);
+    const uiTheme = useSettingsStore(s => s.uiTheme);
 
     useEffect(() => {
-        document.documentElement.dataset.theme = mapStyle;
-    }, [mapStyle]);
+        document.documentElement.dataset.theme = uiTheme;
+    }, [uiTheme]);
 
     return (
         <div className={styles.layout}>

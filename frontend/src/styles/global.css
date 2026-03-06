@@ -9,7 +9,8 @@
     color-scheme: dark;
 }
 
-:root[data-theme='positron'] {
+:root[data-theme='positron'],
+:root[data-theme='atlas-sand'] {
     color-scheme: light;
 }
 

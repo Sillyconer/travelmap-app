@@ -144,3 +144,72 @@
 .flag {
     font-size: 22px;
 }
+
+.paletteGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--md-sys-spacing-12);
+}
+
+.paletteCard {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background: var(--md-sys-color-surface-container);
+    border-radius: var(--md-sys-shape-corner-medium);
+    padding: var(--md-sys-spacing-12);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.16s ease, transform 0.16s ease;
+}
+
+.paletteCard:hover {
+    border-color: var(--md-sys-color-outline);
+    transform: translateY(-1px);
+}
+
+.paletteCardActive {
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent) inset;
+}
+
+.paletteTop {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
+}
+
+.paletteTop strong {
+    color: var(--md-sys-color-on-surface);
+    font-size: 14px;
+}
+
+.paletteTop span {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px;
+}
+
+.swatches {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.hexRow {
+    margin: 0;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (max-width: 720px) {
+    .paletteGrid {
+        grid-template-columns: 1fr;
+    }
+}
