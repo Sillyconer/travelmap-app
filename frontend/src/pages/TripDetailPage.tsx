@@ -591,6 +591,52 @@ export const TripDetailPage = () => {
                             </DndContext>
                         )}
                     </div>
+
+                    <Card className={styles.metaCard}>
+                        <h3>Trip Discussion</h3>
+                        <form onSubmit={handleAddComment} className={styles.commentForm}>
+                            <Input
+                                label="Add a comment"
+                                value={newCommentBody}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCommentBody(e.target.value)}
+                                placeholder="Share a tip or update"
+                                fullWidth
+                            />
+                            <Button size="sm" type="submit" disabled={!newCommentBody.trim()}>Post</Button>
+                        </form>
+                        <div className={styles.commentList}>
+                            {comments.length === 0 && <p className={styles.helperText}>No comments yet.</p>}
+                            {comments.map(comment => (
+                                <div key={comment.id} className={styles.commentItem}>
+                                    <div className={styles.commentHeader}>
+                                        <button
+                                            type="button"
+                                            className={styles.memberIdentityBtn}
+                                            onClick={() => navigate(`/profiles/${comment.username}`)}
+                                        >
+                                            <Avatar seed={comment.username} name={comment.displayName} size={26} />
+                                            <strong>{comment.displayName}</strong>
+                                            <small>@{comment.username}</small>
+                                        </button>
+                                    </div>
+                                    <p className={styles.commentBody}>{comment.body}</p>
+                                    <div className={styles.commentActions}>
+                                        <button type="button" className={styles.reactionBtn} onClick={() => handleToggleReaction(comment.id, '👍')}>
+                                            👍 {comment.reactions.find(r => r.emoji === '👍')?.count || 0}
+                                        </button>
+                                        <button type="button" className={styles.reactionBtn} onClick={() => handleToggleReaction(comment.id, '❤️')}>
+                                            ❤️ {comment.reactions.find(r => r.emoji === '❤️')?.count || 0}
+                                        </button>
+                                        {comment.canDelete && (
+                                            <Button size="sm" variant="text" onClick={() => handleDeleteComment(comment.id)}>
+                                                Delete
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
                 </section>
 
                 {/* Right Column: Metadata & Photos Summary */}
@@ -936,51 +982,6 @@ export const TripDetailPage = () => {
                         </Card>
                     )}
 
-                    <Card className={styles.metaCard}>
-                        <h3>Trip Discussion</h3>
-                        <form onSubmit={handleAddComment} className={styles.commentForm}>
-                            <Input
-                                label="Add a comment"
-                                value={newCommentBody}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCommentBody(e.target.value)}
-                                placeholder="Share a tip or update"
-                                fullWidth
-                            />
-                            <Button size="sm" type="submit" disabled={!newCommentBody.trim()}>Post</Button>
-                        </form>
-                        <div className={styles.commentList}>
-                            {comments.length === 0 && <p className={styles.helperText}>No comments yet.</p>}
-                            {comments.map(comment => (
-                                <div key={comment.id} className={styles.commentItem}>
-                                    <div className={styles.commentHeader}>
-                                        <button
-                                            type="button"
-                                            className={styles.memberIdentityBtn}
-                                            onClick={() => navigate(`/profiles/${comment.username}`)}
-                                        >
-                                            <Avatar seed={comment.username} name={comment.displayName} size={26} />
-                                            <strong>{comment.displayName}</strong>
-                                            <small>@{comment.username}</small>
-                                        </button>
-                                    </div>
-                                    <p className={styles.commentBody}>{comment.body}</p>
-                                    <div className={styles.commentActions}>
-                                        <button type="button" className={styles.reactionBtn} onClick={() => handleToggleReaction(comment.id, '👍')}>
-                                            👍 {comment.reactions.find(r => r.emoji === '👍')?.count || 0}
-                                        </button>
-                                        <button type="button" className={styles.reactionBtn} onClick={() => handleToggleReaction(comment.id, '❤️')}>
-                                            ❤️ {comment.reactions.find(r => r.emoji === '❤️')?.count || 0}
-                                        </button>
-                                        {comment.canDelete && (
-                                            <Button size="sm" variant="text" onClick={() => handleDeleteComment(comment.id)}>
-                                                Delete
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
                 </section>
 
             </div>
