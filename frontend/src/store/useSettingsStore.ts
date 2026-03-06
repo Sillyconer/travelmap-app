@@ -7,7 +7,10 @@ export type MapStyle =
     | 'voyager'
     | 'voyager-nolabels'
     | 'osm-standard'
-    | 'terrain';
+    | 'terrain'
+    | 'oceanic-deep'
+    | 'voyager-neo'
+    | 'pine-earth';
 
 export type UiTheme =
     | 'dark-matter'
@@ -20,10 +23,10 @@ export type UiTheme =
 const THEME_TO_MAP_STYLE: Record<UiTheme, MapStyle> = {
     'dark-matter': 'dark-matter',
     positron: 'positron',
-    voyager: 'voyager',
-    oceanic: 'voyager-nolabels',
+    voyager: 'voyager-neo',
+    oceanic: 'oceanic-deep',
     'atlas-sand': 'terrain',
-    'pine-trail': 'osm-standard',
+    'pine-trail': 'pine-earth',
 };
 
 interface SettingsState {

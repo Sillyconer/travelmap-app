@@ -10,3 +10,27 @@
     height: 100%;
     background-color: var(--md-sys-color-surface-container-low, #1e1e1e);
 }
+
+.map :global(.leaflet-tile.tile-filter-oceanic-deep) {
+    filter: saturate(1.45) hue-rotate(18deg) contrast(1.22) brightness(0.76);
+}
+
+.map :global(.leaflet-tile.tile-filter-voyager-neo) {
+    filter: saturate(1.75) hue-rotate(248deg) contrast(1.08) brightness(0.92);
+}
+
+.map :global(.leaflet-tile.tile-filter-pine-earth) {
+    filter: saturate(1.2) hue-rotate(88deg) contrast(1.15) brightness(0.8);
+}
+
+:global(:root[data-theme='oceanic']) .map {
+    background-color: #0b1d2b;
+}
+
+:global(:root[data-theme='voyager']) .map {
+    background-color: #2a1e33;
+}
+
+:global(:root[data-theme='pine-trail']) .map {
+    background-color: #152316;
+}
