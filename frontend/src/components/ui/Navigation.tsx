@@ -42,9 +42,14 @@ export const Navigation = () => {
         };
         load();
         const timer = window.setInterval(load, 30000);
+        const onNotificationsChanged = () => {
+            load();
+        };
+        window.addEventListener('notifications:changed', onNotificationsChanged);
         return () => {
             active = false;
             window.clearInterval(timer);
+            window.removeEventListener('notifications:changed', onNotificationsChanged);
         };
     }, []);
 

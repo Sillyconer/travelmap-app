@@ -42,6 +42,7 @@ export const NotificationsPage = () => {
         try {
             await api.markNotificationsRead([id]);
             setItems(prev => prev.map(item => (item.id === id ? { ...item, isRead: true } : item)));
+            window.dispatchEvent(new Event('notifications:changed'));
         } catch (err: any) {
             showSnackbar(`Failed to mark notification: ${err.message}`);
         } finally {
@@ -54,6 +55,7 @@ export const NotificationsPage = () => {
         try {
             await api.markAllNotificationsRead();
             setItems(prev => prev.map(item => ({ ...item, isRead: true })));
+            window.dispatchEvent(new Event('notifications:changed'));
             showSnackbar('All notifications marked as read');
         } catch (err: any) {
             showSnackbar(`Failed to mark all as read: ${err.message}`);
