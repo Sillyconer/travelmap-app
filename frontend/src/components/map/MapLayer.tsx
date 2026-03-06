@@ -61,6 +61,7 @@ const MAP_STYLE_SPECS: Record<MapStyle, StyleSpec> = {
         backgroundColor: '#5f7280',
         attribution: CARTO_ATTRIBUTION,
         layers: [
+            { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-blue', opacity: 1 },
             { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-boundaries', opacity: 0.42 },
             { url: 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-labels', opacity: 0.82 },
         ],

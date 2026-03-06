@@ -11,6 +11,11 @@
     background-color: var(--map-background, var(--md-sys-color-surface-container-low, #1e1e1e));
 }
 
+.map :global(.leaflet-tile.tile-oceanic-blue) {
+    filter: sepia(1) saturate(5.8) hue-rotate(168deg) brightness(0.78) contrast(1.08);
+    mix-blend-mode: multiply;
+}
+
 .map :global(.leaflet-tile.tile-oceanic-boundaries) {
     filter: grayscale(1) brightness(0.78) contrast(1.12);
     mix-blend-mode: multiply;
