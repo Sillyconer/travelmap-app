@@ -77,24 +77,23 @@ export const TripDetailPage = () => {
 
     useEffect(() => {
         const loadTrip = async () => {
-            // Check if we already loaded it
-            if (trip && trip.id === Number(id)) return;
+            if (!id) return;
+            const tripId = Number(id);
 
-            // Try local store first as initial state
+            // Use local store as immediate paint, but still fetch server data after.
             const localTrip = trips.find((t: Trip) => t.id === Number(id));
             if (localTrip && localTrip.places) {
                 setTrip(localTrip);
                 setIsLoading(false);
-                return; // Prevent infinite re-fetching
             }
 
             try {
-                const freshData = await api.getTrip(Number(id));
+                const freshData = await api.getTrip(tripId);
                 setTrip(freshData);
                 updateTripInStore(freshData);
 
                 const [loadedExpenses, loadedCurrencies] = await Promise.all([
-                    api.getExpenses(Number(id)).catch(() => []),
+                    api.getExpenses(tripId).catch(() => []),
                     api.getCurrencies().catch(() => []),
                 ]);
                 setExpenses(loadedExpenses);
@@ -102,7 +101,7 @@ export const TripDetailPage = () => {
 
                 const [friendsData, membersData] = await Promise.all([
                     api.getFriends().catch(() => []),
-                    api.getTripMembers(Number(id)).catch(() => []),
+                    api.getTripMembers(tripId).catch(() => []),
                 ]);
                 setFriends(friendsData);
                 setMembers(membersData);
@@ -114,8 +113,8 @@ export const TripDetailPage = () => {
             }
         };
 
-        if (id) loadTrip();
-    }, [id, trips, navigate, updateTripInStore, trip]);
+        loadTrip();
+    }, [id, trips, navigate, updateTripInStore]);
 
     const handleAddPlace = async (e: React.FormEvent) => {
         e.preventDefault();
