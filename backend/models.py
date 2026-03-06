@@ -25,6 +25,33 @@ class Person(BaseModel):
     id: int
     name: str
     color: str
+    is_owner: bool = Field(False, alias="isOwner")
+
+    model_config = {"populate_by_name": True}
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+class UserCreate(BaseModel):
+    username: str
+    display_name: str = Field(alias="displayName")
+    password: str
+
+    model_config = {"populate_by_name": True}
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+
+class UserOut(BaseModel):
+    id: int
+    username: str
+    display_name: str = Field(alias="displayName")
+    person_id: int = Field(alias="personId")
+    created_at: str = Field(alias="createdAt")
+
+    model_config = {"populate_by_name": True}
 
 
 # ── Place ─────────────────────────────────────────────────────────────────────
@@ -40,6 +67,10 @@ class PlaceUpdate(BaseModel):
     lat: float | None = None
     lng: float | None = None
     note: str | None = None
+
+
+class PlaceReorder(BaseModel):
+    order: str
 
 
 class Place(BaseModel):
@@ -110,3 +141,27 @@ class Trip(BaseModel):
     person_ids: list[int] = Field(default_factory=list, alias="personIds")
 
     model_config = {"populate_by_name": True}
+
+
+# ── Share Links ──────────────────────────────────────────────────────────────
+class ShareLinkCreate(BaseModel):
+    """Request body for creating a share link."""
+    type: str  # 'photo' or 'album'
+    photo_id: int | None = Field(None, alias="photoId")
+    trip_id: int | None = Field(None, alias="tripId")
+
+    model_config = {"populate_by_name": True}
+
+
+class ShareLinkOut(BaseModel):
+    """Share link as returned by the API."""
+    id: int
+    token: str
+    type: str
+    photo_id: int | None = Field(None, alias="photoId")
+    trip_id: int | None = Field(None, alias="tripId")
+    url: str
+    created_at: str = Field("", alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+

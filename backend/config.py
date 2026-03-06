@@ -6,6 +6,7 @@ All paths are relative to this file's parent directory.
 """
 
 from pathlib import Path
+import os
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
@@ -28,3 +29,8 @@ THUMB_MAX_SIZE = (400, 400)  # Max width x height for generated thumbnails
 
 # ── Currency ──────────────────────────────────────────────────────────────────
 CURRENCY_SYMBOL = "£"  # Configurable global currency symbol
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+JWT_SECRET = os.getenv("JWT_SECRET", "travelmap-dev-secret")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRES_HOURS = int(os.getenv("JWT_EXPIRES_HOURS", "72"))

@@ -1,25 +1,26 @@
-"""
-TravelMap Backend — Photo API Router
-
-Endpoints for photo upload, update, delete, and zip download.
-Uses multipart/form-data for uploads instead of base64 JSON.
-"""
-
 from __future__ import annotations
 
 import io
 import zipfile
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
-from models import PhotoOut, PhotoUpdate
-from dependencies import get_store
-from photo_service import save_photo, delete_photo_files, clear_all_photo_files
 from config import PHOTOS_DIR
+from dependencies import get_current_user, get_store
+from models import PhotoOut, PhotoUpdate, UserOut
+from services.photo_service import delete_photo_files, process_and_save_upload
 
 router = APIRouter(tags=["photos"])
+
+
+class PhotoAssign(BaseModel):
+    trip_id: int | None = Field(None, alias="tripId")
+    place_id: int | None = Field(None, alias="placeId")
+
+    model_config = {"populate_by_name": True}
 
 
 @router.post("/api/trips/{trip_id}/photos", response_model=PhotoOut, status_code=201)
@@ -30,73 +31,100 @@ async def upload_photo(
     lng: Annotated[float | None, Form()] = None,
     place_id: Annotated[int | None, Form(alias="placeId")] = None,
     taken_at: Annotated[int | None, Form(alias="takenAt")] = None,
+    current_user: UserOut = Depends(get_current_user),
 ):
-    """
-    Upload a photo to a trip via multipart/form-data.
-
-    - lat/lng are optional (unlocated photos allowed)
-    - placeId optionally associates the photo with a place
-    - takenAt is a Unix ms timestamp from EXIF
-    """
     store = get_store()
-
-    # Verify trip exists
-    trip = await store.get_trip(trip_id)
+    trip = await store.get_trip(trip_id, current_user.id)
     if not trip:
         raise HTTPException(404, f"Trip {trip_id} not found")
 
-    # Read file bytes and save to disk
-    file_bytes = await file.read()
-    mime = file.content_type or "image/jpeg"
-    result = save_photo(file_bytes, file.filename or "photo.jpg", mime)
+    new_photo = await process_and_save_upload(file, trip_id, current_user.id, store)
 
-    # Persist to database
-    photo = await store.create_photo(
-        trip_id,
-        name=file.filename or "photo.jpg",
-        filename=result["filename"],
-        mime=mime,
-        width=result["width"],
-        height=result["height"],
-        lat=lat,
-        lng=lng,
-        place_id=place_id,
-        taken_at=taken_at,
-        url=result["url"],
-        thumb_url=result["thumb_url"],
-    )
+    if lat is not None or lng is not None or taken_at is not None or place_id is not None:
+        await store.db.execute(
+            "UPDATE photos SET lat = ?, lng = ?, taken_at = ?, place_id = ? WHERE id = ? AND user_id = ?",
+            (lat, lng, taken_at, place_id, new_photo.id, current_user.id),
+        )
+        await store.db.commit()
+        async with store.db.execute("SELECT * FROM photos WHERE id = ?", (new_photo.id,)) as cur:
+            row = await cur.fetchone()
+            if row:
+                new_photo = store._row_to_photo(row)
+
+    return new_photo
+
+
+@router.post("/api/photos/upload", response_model=PhotoOut, status_code=201)
+async def upload_unattached_photo(
+    file: Annotated[UploadFile, File(description="The photo file")],
+    lat: Annotated[float | None, Form()] = None,
+    lng: Annotated[float | None, Form()] = None,
+    taken_at: Annotated[int | None, Form(alias="takenAt")] = None,
+    current_user: UserOut = Depends(get_current_user),
+):
+    store = get_store()
+    new_photo = await process_and_save_upload(file, None, current_user.id, store)
+
+    if lat is not None or lng is not None or taken_at is not None:
+        await store.db.execute(
+            "UPDATE photos SET lat = ?, lng = ?, taken_at = ? WHERE id = ? AND user_id = ?",
+            (lat, lng, taken_at, new_photo.id, current_user.id),
+        )
+        await store.db.commit()
+        async with store.db.execute("SELECT * FROM photos WHERE id = ?", (new_photo.id,)) as cur:
+            row = await cur.fetchone()
+            if row:
+                new_photo = store._row_to_photo(row)
+
+    return new_photo
+
+
+@router.post("/api/photos/{photo_id}/assign", response_model=PhotoOut)
+async def assign_photo(photo_id: int, data: PhotoAssign, current_user: UserOut = Depends(get_current_user)):
+    store = get_store()
+    if data.trip_id is not None:
+        trip = await store.get_trip(data.trip_id, current_user.id)
+        if not trip:
+            raise HTTPException(404, f"Trip {data.trip_id} not found")
+
+    photo = await store.assign_photo(current_user.id, photo_id, data.trip_id, data.place_id)
+    if not photo:
+        raise HTTPException(404, f"Photo {photo_id} not found")
     return photo
 
 
 @router.post("/api/trips/{trip_id}/photos/{photo_id}/update", response_model=PhotoOut)
-async def update_photo(trip_id: int, photo_id: int, data: PhotoUpdate):
-    """Update photo metadata (e.g., assign to a place)."""
+async def update_photo(trip_id: int, photo_id: int, data: PhotoUpdate, current_user: UserOut = Depends(get_current_user)):
     store = get_store()
-    photo = await store.update_photo(trip_id, photo_id, data.place_id)
+    photo = await store.update_photo(current_user.id, trip_id, photo_id, data.place_id)
     if not photo:
         raise HTTPException(404, f"Photo {photo_id} not found in trip {trip_id}")
     return photo
 
 
 @router.delete("/api/trips/{trip_id}/photos/{photo_id}")
-async def delete_photo(trip_id: int, photo_id: int):
-    """Delete a single photo (file + DB record)."""
+async def delete_photo(trip_id: int, photo_id: int, current_user: UserOut = Depends(get_current_user)):
     store = get_store()
-    filename = await store.delete_photo(trip_id, photo_id)
-    if not filename:
+    async with store.db.execute(
+        "SELECT filename FROM photos WHERE id = ? AND trip_id = ? AND user_id = ?",
+        (photo_id, trip_id, current_user.id),
+    ) as cur:
+        row = await cur.fetchone()
+
+    if not row:
         raise HTTPException(404, f"Photo {photo_id} not found in trip {trip_id}")
-    delete_photo_files(filename)
+
+    deleted_filename = await store.delete_photo(current_user.id, trip_id, photo_id)
+    if deleted_filename:
+        await delete_photo_files({"filename": deleted_filename})
+
     return {}
 
 
 @router.get("/api/trips/{trip_id}/photos/download")
-async def download_photos(trip_id: int, ids: str = ""):
-    """
-    Download selected photos as a zip.
-    Pass comma-separated photo IDs, or omit for all photos in the trip.
-    """
+async def download_photos(trip_id: int, ids: str = "", current_user: UserOut = Depends(get_current_user)):
     store = get_store()
-    trip = await store.get_trip(trip_id)
+    trip = await store.get_trip(trip_id, current_user.id)
     if not trip:
         raise HTTPException(404, f"Trip {trip_id} not found")
 
@@ -106,7 +134,6 @@ async def download_photos(trip_id: int, ids: str = ""):
     if not photos:
         raise HTTPException(404, "No photos to download")
 
-    # Build zip in memory
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for photo in photos:
@@ -124,16 +151,13 @@ async def download_photos(trip_id: int, ids: str = ""):
 
 
 @router.get("/api/photos", response_model=list[dict])
-async def list_all_photos():
-    """Get all photos across all trips (for the photo library view)."""
+async def list_all_photos(current_user: UserOut = Depends(get_current_user)):
     store = get_store()
-    return await store.get_all_photos()
+    return await store.get_all_photos(current_user.id)
 
 
 @router.delete("/api/photos")
-async def clear_all_photos():
-    """⚠️ Delete ALL photos (files + DB records). Danger zone."""
+async def clear_all_photos(current_user: UserOut = Depends(get_current_user)):
     store = get_store()
-    count = await store.clear_all_photos()
-    clear_all_photo_files()
+    count = await store.clear_all_photos(current_user.id)
     return {"removed": count}

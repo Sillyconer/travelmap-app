@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from config import HOST, PORT, PHOTOS_DIR, THUMBS_DIR
 from store import Store
 from dependencies import set_store
-from routers import trips, places, photos, persons
+from routers import auth, trips, places, photos, persons, sharing
 
 
 # ── Lifespan (startup / shutdown) ────────────────────────────────────────────
@@ -48,7 +48,7 @@ app = FastAPI(
 # CORS — allow the Vite dev server during development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,6 +60,8 @@ app.include_router(trips.router)
 app.include_router(places.router)
 app.include_router(photos.router)
 app.include_router(persons.router)
+app.include_router(sharing.router)
+app.include_router(auth.router)
 
 # ── Static files ──────────────────────────────────────────────────────────────
 
