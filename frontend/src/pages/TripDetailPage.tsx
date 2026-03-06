@@ -62,6 +62,7 @@ export const TripDetailPage = () => {
     // Expenses State
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [settlement, setSettlement] = useState<ExpenseSettlement | null>(null);
+    const [showExpenseBreakdown, setShowExpenseBreakdown] = useState(false);
     const [expenseAmount, setExpenseAmount] = useState('');
     const [expenseCurrency, setExpenseCurrency] = useState('USD');
     const [expenseNote, setExpenseNote] = useState('');
@@ -670,6 +671,37 @@ export const TripDetailPage = () => {
                                             );
                                         })}
                                     </div>
+                                )}
+                                {settlement.expenseBreakdowns.length > 0 && (
+                                    <>
+                                        <Button size="sm" variant="text" onClick={() => setShowExpenseBreakdown(v => !v)}>
+                                            {showExpenseBreakdown ? 'Hide split details' : 'Show split details'}
+                                        </Button>
+                                        {showExpenseBreakdown && (
+                                            <div className={styles.breakdownList}>
+                                                {settlement.expenseBreakdowns.map(expense => (
+                                                    <div key={`breakdown-${expense.expenseId}`} className={styles.breakdownItem}>
+                                                        <div className={styles.breakdownHead}>
+                                                            <strong>{expense.note || 'Expense'}</strong>
+                                                            <span>
+                                                                {expense.amount} {expense.currency}
+                                                            </span>
+                                                        </div>
+                                                        <p className={styles.helperText}>
+                                                            Paid by {expense.payerDisplayName} · {expense.amountHome} {expense.homeCurrency}
+                                                        </p>
+                                                        <div className={styles.breakdownShares}>
+                                                            {expense.shares.map(share => (
+                                                                <span key={`share-${expense.expenseId}-${share.userId}`} className={styles.shareChip}>
+                                                                    {share.displayName}: {share.amount} {expense.homeCurrency}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}

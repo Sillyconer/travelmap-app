@@ -273,9 +273,30 @@ export interface ExpenseSettlementTransfer {
     amount: number;
 }
 
+export interface ExpenseSettlementBreakdownShare {
+    userId: number;
+    username: string;
+    displayName: string;
+    amount: number;
+}
+
+export interface ExpenseSettlementBreakdown {
+    expenseId: number;
+    payerUserId: number;
+    payerDisplayName: string;
+    amount: number;
+    currency: string;
+    amountHome: number;
+    homeCurrency: string;
+    note: string;
+    createdAt: string;
+    shares: ExpenseSettlementBreakdownShare[];
+}
+
 export interface ExpenseSettlement {
     participants: ExpenseSettlementParticipant[];
     transfers: ExpenseSettlementTransfer[];
+    expenseBreakdowns: ExpenseSettlementBreakdown[];
     total: number;
     perPerson: number;
     homeCurrency: string;

@@ -434,6 +434,11 @@ async def test_custom_expense_split_affects_settlement():
 
         settlement = await owner_client.get(f"/api/trips/{trip_id}/expenses/settlement")
         assert settlement.status_code == 200
-        transfers = settlement.json()["transfers"]
+        payload = settlement.json()
+        transfers = payload["transfers"]
         assert len(transfers) == 1
         assert transfers[0]["amount"] == 60.0
+        assert len(payload["expenseBreakdowns"]) == 1
+        breakdown = payload["expenseBreakdowns"][0]
+        assert breakdown["note"] == "Dinner"
+        assert len(breakdown["shares"]) == 2

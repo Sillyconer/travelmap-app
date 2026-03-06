@@ -2243,18 +2243,42 @@ class Store:
 
     async def get_trip_settlement(self, trip_id: int, user_id: int) -> dict:
         if not await self.user_can_access_trip(user_id, trip_id):
-            return {"participants": [], "transfers": [], "total": 0.0, "perPerson": 0.0, "homeCurrency": "USD", "mixedCurrencies": False}
+            return {
+                "participants": [],
+                "transfers": [],
+                "total": 0.0,
+                "perPerson": 0.0,
+                "homeCurrency": "USD",
+                "mixedCurrencies": False,
+                "expenseBreakdowns": [],
+            }
 
         async with self.db.execute("SELECT user_id FROM trips WHERE id = ?", (trip_id,)) as cursor:
             trip_row = await cursor.fetchone()
         if not trip_row:
-            return {"participants": [], "transfers": [], "total": 0.0, "perPerson": 0.0, "homeCurrency": "USD", "mixedCurrencies": False}
+            return {
+                "participants": [],
+                "transfers": [],
+                "total": 0.0,
+                "perPerson": 0.0,
+                "homeCurrency": "USD",
+                "mixedCurrencies": False,
+                "expenseBreakdowns": [],
+            }
 
         owner_id = int(trip_row["user_id"])
         member_rows = await self.db.execute_fetchall("SELECT user_id FROM trip_members WHERE trip_id = ?", (trip_id,))
         participant_ids = sorted({owner_id, *[int(r["user_id"]) for r in member_rows]})
         if not participant_ids:
-            return {"participants": [], "transfers": [], "total": 0.0, "perPerson": 0.0, "homeCurrency": "USD", "mixedCurrencies": False}
+            return {
+                "participants": [],
+                "transfers": [],
+                "total": 0.0,
+                "perPerson": 0.0,
+                "homeCurrency": "USD",
+                "mixedCurrencies": False,
+                "expenseBreakdowns": [],
+            }
 
         placeholders = ",".join(["?"] * len(participant_ids))
         user_rows = await self.db.execute_fetchall(
@@ -2271,7 +2295,7 @@ class Store:
         }
 
         expense_rows = await self.db.execute_fetchall(
-            "SELECT id, user_id, amount_home, home_currency FROM expenses WHERE trip_id = ?",
+            "SELECT id, user_id, amount, currency, amount_home, home_currency, note, created_at FROM expenses WHERE trip_id = ? ORDER BY id DESC",
             (trip_id,),
         )
         if not expense_rows:
@@ -2291,10 +2315,12 @@ class Store:
                 "perPerson": 0.0,
                 "homeCurrency": "USD",
                 "mixedCurrencies": False,
+                "expenseBreakdowns": [],
             }
 
         paid_map = {uid: 0.0 for uid in participant_ids}
         share_map = {uid: 0.0 for uid in participant_ids}
+        expense_breakdowns: list[dict] = []
         currencies = {str(r["home_currency"] or "USD") for r in expense_rows}
         for row in expense_rows:
             payer_id = int(row["user_id"])
@@ -2307,15 +2333,48 @@ class Store:
                 "SELECT user_id, amount_home FROM expense_splits WHERE expense_id = ?",
                 (expense_id,),
             )
+            breakdown_shares: list[dict] = []
             if split_rows:
                 for split in split_rows:
                     split_user_id = int(split["user_id"])
+                    split_amount = float(split["amount_home"])
                     if split_user_id in share_map:
-                        share_map[split_user_id] += float(split["amount_home"])
+                        share_map[split_user_id] += split_amount
+                    breakdown_shares.append(
+                        {
+                            "userId": split_user_id,
+                            "username": users_by_id.get(split_user_id, {}).get("username", f"user-{split_user_id}"),
+                            "displayName": users_by_id.get(split_user_id, {}).get("displayName", f"User {split_user_id}"),
+                            "amount": round(split_amount, 2),
+                        }
+                    )
             else:
                 equal_share = amount_home / len(participant_ids)
                 for participant_id in participant_ids:
                     share_map[participant_id] += equal_share
+                    breakdown_shares.append(
+                        {
+                            "userId": participant_id,
+                            "username": users_by_id.get(participant_id, {}).get("username", f"user-{participant_id}"),
+                            "displayName": users_by_id.get(participant_id, {}).get("displayName", f"User {participant_id}"),
+                            "amount": round(equal_share, 2),
+                        }
+                    )
+
+            expense_breakdowns.append(
+                {
+                    "expenseId": expense_id,
+                    "payerUserId": payer_id,
+                    "payerDisplayName": users_by_id.get(payer_id, {}).get("displayName", f"User {payer_id}"),
+                    "amount": float(row["amount"]),
+                    "currency": str(row["currency"]),
+                    "amountHome": round(amount_home, 2),
+                    "homeCurrency": str(row["home_currency"] or "USD"),
+                    "note": row["note"] or "",
+                    "createdAt": row["created_at"],
+                    "shares": breakdown_shares,
+                }
+            )
 
         total = sum(paid_map.values())
         per_person = (total / len(participant_ids)) if participant_ids else 0.0
@@ -2370,6 +2429,7 @@ class Store:
             "perPerson": round(per_person, 2),
             "homeCurrency": home_currency,
             "mixedCurrencies": len(currencies) > 1,
+            "expenseBreakdowns": expense_breakdowns,
         }
 
     # ── Share Links ──────────────────────────────────────────────────────

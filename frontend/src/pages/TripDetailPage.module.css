@@ -244,6 +244,41 @@
     gap: 6px;
 }
 
+.breakdownList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.breakdownItem {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-small);
+    padding: 8px;
+}
+
+.breakdownHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.breakdownShares {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.shareChip {
+    display: inline-flex;
+    border-radius: 999px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
 .memberInviteRow {
     display: flex;
     gap: 10px;
