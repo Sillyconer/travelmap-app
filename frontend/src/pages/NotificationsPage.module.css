@@ -81,6 +81,12 @@
     gap: 12px;
 }
 
+.itemMain {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
 .itemHead h3 {
     margin: 0 0 4px;
 }

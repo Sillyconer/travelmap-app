@@ -88,6 +88,12 @@
     color: var(--md-sys-color-on-surface-variant);
 }
 
+.profileResultMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .dot {
     width: 10px;
     height: 10px;

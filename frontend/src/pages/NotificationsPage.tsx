@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Avatar } from '../components/ui/Avatar';
 import { showSnackbar } from '../components/ui/Snackbar';
 import * as api from '../api/client';
 import type { NotificationItem } from '../types/models';
@@ -123,6 +124,23 @@ export const NotificationsPage = () => {
         navigate(route);
     };
 
+    const getNotificationActor = (item: NotificationItem): { seed: string; name: string } | null => {
+        const payload = item.payload as Record<string, unknown>;
+        const fromUsername = payload.fromUsername;
+        const fromDisplayName = payload.fromDisplayName;
+        if (typeof fromUsername === 'string' && fromUsername.trim()) {
+            return {
+                seed: fromUsername,
+                name: typeof fromDisplayName === 'string' && fromDisplayName.trim() ? fromDisplayName : fromUsername,
+            };
+        }
+        const username = payload.username;
+        if (typeof username === 'string' && username.trim()) {
+            return { seed: username, name: username };
+        }
+        return null;
+    };
+
     const filteredItems = useMemo(() => {
         if (activeFilter === 'all' || activeFilter === 'unread') {
             return items;
@@ -175,29 +193,41 @@ export const NotificationsPage = () => {
                 <Card className={styles.empty}>No notifications yet.</Card>
             ) : (
                 <div className={styles.list}>
-                    {filteredItems.map(item => (
-                        <Card key={item.id} className={`${styles.item} ${item.isRead ? styles.read : styles.unread}`}>
-                            <div className={styles.itemHead}>
-                                <div>
-                                    <h3>{item.title}</h3>
-                                    <p>{item.message}</p>
+                    {filteredItems.map(item => {
+                        const actor = getNotificationActor(item);
+                        return (
+                            <Card key={item.id} className={`${styles.item} ${item.isRead ? styles.read : styles.unread}`}>
+                                <div className={styles.itemHead}>
+                                    <div className={styles.itemMain}>
+                                        {actor && (
+                                            <Avatar
+                                                seed={actor.seed}
+                                                name={actor.name}
+                                                size={34}
+                                            />
+                                        )}
+                                        <div>
+                                            <h3>{item.title}</h3>
+                                            <p>{item.message}</p>
+                                        </div>
+                                    </div>
+                                    <span className={styles.date}>{toTime(item.updatedAt || item.createdAt)}</span>
                                 </div>
-                                <span className={styles.date}>{toTime(item.updatedAt || item.createdAt)}</span>
-                            </div>
-                            <div className={styles.itemFoot}>
-                                <span className={styles.type}>
-                                    {item.type}{item.occurrenceCount > 1 ? ` · x${item.occurrenceCount}` : ''}
-                                </span>
-                                <div className={styles.inlineActions}>
-                                    <Button onClick={() => openNotificationTarget(item)} disabled={isSubmitting}>Open</Button>
-                                    {!item.isRead && (
-                                        <Button onClick={() => markOneRead(item.id)} disabled={isSubmitting}>Mark read</Button>
-                                    )}
-                                    <Button onClick={() => archiveOne(item.id)} disabled={isSubmitting} variant="text">Dismiss</Button>
+                                <div className={styles.itemFoot}>
+                                    <span className={styles.type}>
+                                        {item.type}{item.occurrenceCount > 1 ? ` · x${item.occurrenceCount}` : ''}
+                                    </span>
+                                    <div className={styles.inlineActions}>
+                                        <Button onClick={() => openNotificationTarget(item)} disabled={isSubmitting}>Open</Button>
+                                        {!item.isRead && (
+                                            <Button onClick={() => markOneRead(item.id)} disabled={isSubmitting}>Mark read</Button>
+                                        )}
+                                        <Button onClick={() => archiveOne(item.id)} disabled={isSubmitting} variant="text">Dismiss</Button>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                    ))}
+                            </Card>
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { Avatar } from '../components/ui/Avatar';
 import { showSnackbar } from '../components/ui/Snackbar';
 import * as api from '../api/client';
 import type { UnifiedSearchResults } from '../types/models';
@@ -250,8 +251,11 @@ export const SearchPage = () => {
                         <div className={styles.list}>
                             {results.profiles.map(item => (
                                 <Link key={`profile-${item.id}`} to={item.route} className={styles.item}>
-                                    <span>{highlightText(item.displayName)}</span>
-                                    <small>@{highlightText(item.username)}{item.isFriend ? ' · friend' : ''}</small>
+                                    <Avatar seed={item.username} name={item.displayName} size={32} />
+                                    <span className={styles.profileResultMeta}>
+                                        <span>{highlightText(item.displayName)}</span>
+                                        <small>@{highlightText(item.username)}{item.isFriend ? ' · friend' : ''}</small>
+                                    </span>
                                 </Link>
                             ))}
                         </div>
