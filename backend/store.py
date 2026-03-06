@@ -211,6 +211,20 @@ CREATE TABLE IF NOT EXISTS expenses (
     note          TEXT    NOT NULL DEFAULT '',
     created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS expense_splits (
+    expense_id    INTEGER NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+    user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    amount_home   REAL    NOT NULL,
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (expense_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_expense_splits_expense
+    ON expense_splits(expense_id);
+
+CREATE INDEX IF NOT EXISTS idx_expense_splits_user
+    ON expense_splits(user_id);
 """
 
 VALID_PROFILE_THEMES = {
@@ -349,6 +363,19 @@ class Store:
         await self.db.execute(
             "CREATE INDEX IF NOT EXISTS idx_comment_reactions_comment ON comment_reactions(comment_id, emoji)"
         )
+        await self.db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS expense_splits (
+                expense_id    INTEGER NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+                user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                amount_home   REAL    NOT NULL,
+                created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+                PRIMARY KEY (expense_id, user_id)
+            )
+            """
+        )
+        await self.db.execute("CREATE INDEX IF NOT EXISTS idx_expense_splits_expense ON expense_splits(expense_id)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS idx_expense_splits_user ON expense_splits(user_id)")
 
     async def _ensure_photos_trip_nullable(self) -> None:
         rows = await self.db.execute_fetchall("PRAGMA table_info(photos)")
@@ -2132,6 +2159,17 @@ class Store:
             for r in rows
         ]
 
+    async def get_trip_participant_ids(self, trip_id: int) -> list[int]:
+        async with self.db.execute("SELECT user_id FROM trips WHERE id = ?", (trip_id,)) as cursor:
+            owner = await cursor.fetchone()
+        if not owner:
+            return []
+        member_rows = await self.db.execute_fetchall(
+            "SELECT user_id FROM trip_members WHERE trip_id = ?",
+            (trip_id,),
+        )
+        return sorted({int(owner["user_id"]), *[int(row["user_id"]) for row in member_rows]})
+
     # ── Expenses ──────────────────────────────────────────────────────────
 
     async def create_expense(
@@ -2145,6 +2183,7 @@ class Store:
         home_currency: str,
         rate_used: float,
         note: str,
+        splits_home: list[tuple[int, float]] | None = None,
     ) -> ExpenseOut:
         cursor = await self.db.execute(
             """
@@ -2153,8 +2192,18 @@ class Store:
             """,
             (trip_id, place_id, user_id, amount, currency.upper(), amount_home, home_currency.upper(), rate_used, note),
         )
+        expense_id = int(cursor.lastrowid or 0)
+
+        split_rows = splits_home or []
+        if split_rows:
+            await self.db.execute("DELETE FROM expense_splits WHERE expense_id = ?", (expense_id,))
+            for split_user_id, split_amount in split_rows:
+                await self.db.execute(
+                    "INSERT INTO expense_splits (expense_id, user_id, amount_home) VALUES (?, ?, ?)",
+                    (expense_id, int(split_user_id), float(split_amount)),
+                )
         await self.db.commit()
-        async with self.db.execute("SELECT * FROM expenses WHERE id = ?", (int(cursor.lastrowid or 0),)) as c:
+        async with self.db.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,)) as c:
             row = await c.fetchone()
         assert row is not None
         return ExpenseOut(
@@ -2222,7 +2271,7 @@ class Store:
         }
 
         expense_rows = await self.db.execute_fetchall(
-            "SELECT user_id, amount_home, home_currency FROM expenses WHERE trip_id = ?",
+            "SELECT id, user_id, amount_home, home_currency FROM expenses WHERE trip_id = ?",
             (trip_id,),
         )
         if not expense_rows:
@@ -2245,11 +2294,28 @@ class Store:
             }
 
         paid_map = {uid: 0.0 for uid in participant_ids}
+        share_map = {uid: 0.0 for uid in participant_ids}
         currencies = {str(r["home_currency"] or "USD") for r in expense_rows}
         for row in expense_rows:
             payer_id = int(row["user_id"])
+            expense_id = int(row["id"])
+            amount_home = float(row["amount_home"])
             if payer_id in paid_map:
-                paid_map[payer_id] += float(row["amount_home"])
+                paid_map[payer_id] += amount_home
+
+            split_rows = await self.db.execute_fetchall(
+                "SELECT user_id, amount_home FROM expense_splits WHERE expense_id = ?",
+                (expense_id,),
+            )
+            if split_rows:
+                for split in split_rows:
+                    split_user_id = int(split["user_id"])
+                    if split_user_id in share_map:
+                        share_map[split_user_id] += float(split["amount_home"])
+            else:
+                equal_share = amount_home / len(participant_ids)
+                for participant_id in participant_ids:
+                    share_map[participant_id] += equal_share
 
         total = sum(paid_map.values())
         per_person = (total / len(participant_ids)) if participant_ids else 0.0
@@ -2258,7 +2324,7 @@ class Store:
         balances: list[dict] = []
         for uid in participant_ids:
             paid = round(paid_map.get(uid, 0.0), 2)
-            share = round(per_person, 2)
+            share = round(share_map.get(uid, 0.0), 2)
             balance = round(paid - share, 2)
             participants.append(
                 {

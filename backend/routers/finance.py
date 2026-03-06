@@ -23,6 +23,9 @@ class ExpenseRequest(BaseModel):
     currency: str
     place_id: int | None = Field(None, alias="placeId")
     note: str = ""
+    split_mode: str = Field("equal", alias="splitMode")
+    participant_user_ids: list[int] | None = Field(None, alias="participantUserIds")
+    custom_shares: dict[str, float] | None = Field(None, alias="customShares")
 
     model_config = {"populate_by_name": True}
 
@@ -54,6 +57,36 @@ async def create_expense(trip_id: int, data: ExpenseRequest, current_user: UserO
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+    trip_participants = await store.get_trip_participant_ids(trip_id)
+    if not trip_participants:
+        raise HTTPException(status_code=400, detail="Trip has no participants")
+
+    requested_participants = data.participant_user_ids if data.participant_user_ids else trip_participants
+    participant_ids = sorted({int(uid) for uid in requested_participants})
+    if not participant_ids:
+        raise HTTPException(status_code=400, detail="At least one participant is required")
+    if any(uid not in trip_participants for uid in participant_ids):
+        raise HTTPException(status_code=400, detail="Split contains users outside this trip")
+
+    split_mode = data.split_mode.strip().lower()
+    split_rows: list[tuple[int, float]] = []
+    if split_mode == "equal":
+        equal_share = conversion["converted"] / len(participant_ids)
+        split_rows = [(uid, equal_share) for uid in participant_ids]
+    elif split_mode == "custom":
+        custom = data.custom_shares or {}
+        weighted_users = [(uid, float(custom.get(str(uid), 0.0))) for uid in participant_ids]
+        weighted_users = [(uid, weight) for uid, weight in weighted_users if weight > 0]
+        if not weighted_users:
+            raise HTTPException(status_code=400, detail="Custom split requires positive shares")
+        total_weight = sum(weight for _, weight in weighted_users)
+        split_rows = [
+            (uid, conversion["converted"] * (weight / total_weight))
+            for uid, weight in weighted_users
+        ]
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported split mode")
+
     return await store.create_expense(
         user_id=current_user.id,
         trip_id=trip_id,
@@ -64,6 +97,7 @@ async def create_expense(trip_id: int, data: ExpenseRequest, current_user: UserO
         home_currency=home_currency,
         rate_used=conversion["rate"],
         note=data.note,
+        splits_home=split_rows,
     )
 
 

@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import * as api from '../api/client';
 import { showSnackbar } from '../components/ui/Snackbar';
 import type { Trip, PlaceCreate, Place } from '../types/models';
@@ -65,6 +65,9 @@ export const TripDetailPage = () => {
     const [expenseAmount, setExpenseAmount] = useState('');
     const [expenseCurrency, setExpenseCurrency] = useState('USD');
     const [expenseNote, setExpenseNote] = useState('');
+    const [expenseSplitMode, setExpenseSplitMode] = useState<'equal' | 'custom'>('equal');
+    const [expenseParticipantIds, setExpenseParticipantIds] = useState<number[]>([]);
+    const [expenseCustomShares, setExpenseCustomShares] = useState<Record<number, string>>({});
     const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
     const [friends, setFriends] = useState<Friend[]>([]);
     const [members, setMembers] = useState<TripMember[]>([]);
@@ -285,16 +288,29 @@ export const TripDetailPage = () => {
             return;
         }
         try {
+            const participantIds = expenseParticipantIds.length > 0
+                ? expenseParticipantIds
+                : tripExpenseParticipants.map(p => p.id);
+            const customSharesPayload = expenseSplitMode === 'custom'
+                ? Object.fromEntries(
+                    participantIds.map(id => [String(id), Number(expenseCustomShares[id] || 0)]),
+                )
+                : undefined;
             const created = await api.createExpense(trip.id, {
                 amount: parseFloat(expenseAmount),
                 currency: expenseCurrency,
                 note: expenseNote,
+                splitMode: expenseSplitMode,
+                participantUserIds: participantIds,
+                customShares: customSharesPayload,
             });
             setExpenses(prev => [created, ...prev]);
             const refreshedSettlement = await api.getExpenseSettlement(trip.id).catch(() => null);
             setSettlement(refreshedSettlement);
             setExpenseAmount('');
             setExpenseNote('');
+            setExpenseSplitMode('equal');
+            setExpenseCustomShares({});
             showSnackbar('Expense logged');
         } catch (err: any) {
             showSnackbar(`Failed to add expense: ${err.message}`);
@@ -350,6 +366,35 @@ export const TripDetailPage = () => {
 
     const isOwner = user?.id === trip.ownerUserId;
     const canEdit = trip.accessRole !== 'viewer';
+
+    const tripExpenseParticipants = useMemo(() => {
+        const participantMap = new Map<number, { id: number; name: string }>();
+        if (user) {
+            participantMap.set(user.id, { id: user.id, name: `${user.displayName} (you)` });
+        }
+        for (const member of members) {
+            if (!participantMap.has(member.id)) {
+                participantMap.set(member.id, { id: member.id, name: member.displayName });
+            }
+        }
+        return Array.from(participantMap.values());
+    }, [members, user]);
+
+    useEffect(() => {
+        if (expenseParticipantIds.length === 0 && tripExpenseParticipants.length > 0) {
+            setExpenseParticipantIds(tripExpenseParticipants.map(p => p.id));
+        }
+    }, [tripExpenseParticipants, expenseParticipantIds.length]);
+
+    const toggleExpenseParticipant = (participantId: number) => {
+        setExpenseParticipantIds(prev => {
+            if (prev.includes(participantId)) {
+                const next = prev.filter(id => id !== participantId);
+                return next.length === 0 ? prev : next;
+            }
+            return [...prev, participantId];
+        });
+    };
     const invitedFriendIds = new Set(members.map(m => m.id));
     const invitables = friends.filter(f => !invitedFriendIds.has(f.id));
 
@@ -543,6 +588,56 @@ export const TripDetailPage = () => {
                                     fullWidth
                                 />
                             </div>
+                            <div className={styles.coordRow}>
+                                <select
+                                    value={expenseSplitMode}
+                                    onChange={(e) => setExpenseSplitMode(e.target.value as 'equal' | 'custom')}
+                                    className={styles.select}
+                                >
+                                    <option value="equal">Split equally</option>
+                                    <option value="custom">Custom split</option>
+                                </select>
+                            </div>
+                            <div className={styles.expenseParticipants}>
+                                {tripExpenseParticipants.map(participant => {
+                                    const checked = expenseParticipantIds.includes(participant.id);
+                                    return (
+                                        <label key={`expense-participant-${participant.id}`} className={styles.checkboxChip}>
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={() => toggleExpenseParticipant(participant.id)}
+                                            />
+                                            <span>{participant.name}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            {expenseSplitMode === 'custom' && (
+                                <div className={styles.customSplitGrid}>
+                                    {expenseParticipantIds.map(participantId => {
+                                        const participant = tripExpenseParticipants.find(p => p.id === participantId);
+                                        if (!participant) {
+                                            return null;
+                                        }
+                                        return (
+                                            <Input
+                                                key={`custom-share-${participant.id}`}
+                                                label={`${participant.name} share weight`}
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={expenseCustomShares[participant.id] ?? ''}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                    const value = e.target.value;
+                                                    setExpenseCustomShares(prev => ({ ...prev, [participant.id]: value }));
+                                                }}
+                                                fullWidth
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )}
                             {canEdit && <Button size="sm" type="submit">Add Expense</Button>}
                         </form>
                         <div className={styles.expenseList}>

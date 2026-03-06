@@ -7,12 +7,13 @@ from httpx import ASGITransport, AsyncClient
 os.environ["DB_NAME"] = "test_travelmap.db"
 
 from main import app
-from dependencies import set_store
+from dependencies import clear_rate_limits, set_store
 from store import Store
 
 
 @pytest.fixture(autouse=True)
 async def setup_db():
+    clear_rate_limits()
     db_path = Path("test_travelmap.db")
     if db_path.exists():
         db_path.unlink()
@@ -377,3 +378,62 @@ async def test_comment_mentions_create_notification_for_mentioned_user():
         assert alice_notifications.status_code == 200
         mention_notifications = [n for n in alice_notifications.json() if n["type"] == "comment_mention"]
         assert len(mention_notifications) >= 1
+
+
+@pytest.mark.asyncio
+async def test_custom_expense_split_affects_settlement():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as owner_client, AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as member_client:
+        owner_register = await owner_client.post(
+            "/api/auth/register",
+            json={"username": "splitowner", "displayName": "Split Owner", "password": "secret"},
+        )
+        member_register = await member_client.post(
+            "/api/auth/register",
+            json={"username": "splitmember", "displayName": "Split Member", "password": "secret"},
+        )
+        assert owner_register.status_code == 201
+        assert member_register.status_code == 201
+
+        owner_client.headers.update({"Authorization": f"Bearer {owner_register.json()['token']}"})
+        member_client.headers.update({"Authorization": f"Bearer {member_register.json()['token']}"})
+
+        req = await member_client.post("/api/social/friend-requests", json={"username": "splitowner"})
+        assert req.status_code == 201
+        accepted = await owner_client.post(f"/api/social/friend-requests/{req.json()['id']}/accept")
+        assert accepted.status_code == 200
+
+        trip = await owner_client.post(
+            "/api/trips",
+            json={"name": "Custom Split Trip", "color": "#3355AA", "visibility": "friends_only"},
+        )
+        assert trip.status_code == 201
+        trip_id = trip.json()["id"]
+
+        invited = await owner_client.post(
+            f"/api/trips/{trip_id}/members/{member_register.json()['user']['id']}?role=editor"
+        )
+        assert invited.status_code == 200
+
+        expense = await owner_client.post(
+            f"/api/trips/{trip_id}/expenses",
+            json={
+                "amount": 80,
+                "currency": "USD",
+                "note": "Dinner",
+                "splitMode": "custom",
+                "participantUserIds": [owner_register.json()["user"]["id"], member_register.json()["user"]["id"]],
+                "customShares": {
+                    str(owner_register.json()["user"]["id"]): 1,
+                    str(member_register.json()["user"]["id"]): 3,
+                },
+            },
+        )
+        assert expense.status_code == 201
+
+        settlement = await owner_client.get(f"/api/trips/{trip_id}/expenses/settlement")
+        assert settlement.status_code == 200
+        transfers = settlement.json()["transfers"]
+        assert len(transfers) == 1
+        assert transfers[0]["amount"] == 60.0

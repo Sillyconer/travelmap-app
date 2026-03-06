@@ -29,6 +29,10 @@ def get_store() -> Store:
     return _store
 
 
+def clear_rate_limits() -> None:
+    _rate_limit_hits.clear()
+
+
 async def get_current_user(authorization: str | None = Header(default=None)) -> UserOut:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")

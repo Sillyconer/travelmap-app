@@ -217,7 +217,18 @@ export const convertCurrency = (amount: number, fromCurrency: string, toCurrency
         method: 'POST',
         body: JSON.stringify({ amount, fromCurrency, toCurrency }),
     });
-export const createExpense = (tripId: number, data: { amount: number; currency: string; placeId?: number; note?: string }) =>
+export const createExpense = (
+    tripId: number,
+    data: {
+        amount: number;
+        currency: string;
+        placeId?: number;
+        note?: string;
+        splitMode?: 'equal' | 'custom';
+        participantUserIds?: number[];
+        customShares?: Record<string, number>;
+    },
+) =>
     fetcher<Expense>(`/trips/${tripId}/expenses`, { method: 'POST', body: JSON.stringify(data) });
 export const getExpenses = (tripId: number) => fetcher<Expense[]>(`/trips/${tripId}/expenses`);
 export const getExpenseSettlement = (tripId: number) => fetcher<ExpenseSettlement>(`/trips/${tripId}/expenses/settlement`);
