@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from config import HOST, PORT, PHOTOS_DIR, THUMBS_DIR
 from store import Store
 from dependencies import set_store
-from routers import auth, finance, trips, places, photos, persons, sharing, social
+from routers import auth, finance, notifications, profiles, trips, places, photos, persons, sharing, social
 
 
 # ── Lifespan (startup / shutdown) ────────────────────────────────────────────
@@ -64,12 +64,19 @@ app.include_router(sharing.router)
 app.include_router(auth.router)
 app.include_router(social.router)
 app.include_router(finance.router)
+app.include_router(profiles.router)
+app.include_router(notifications.router)
 
 # ── Static files ──────────────────────────────────────────────────────────────
 
 # Serve uploaded photos
+# Legacy/static paths
 app.mount("/photos/thumbs", StaticFiles(directory=str(THUMBS_DIR)), name="thumbs")
 app.mount("/photos", StaticFiles(directory=str(PHOTOS_DIR)), name="photos")
+
+# API-style paths used by stored photo URLs
+app.mount("/api/photos/thumb", StaticFiles(directory=str(THUMBS_DIR)), name="api-photo-thumbs")
+app.mount("/api/photos/raw", StaticFiles(directory=str(PHOTOS_DIR)), name="api-photo-raw")
 
 # Serve the frontend build (production mode)
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"

@@ -90,3 +90,85 @@ async def test_upload_unattached_and_assign_photo(authed_client: AsyncClient):
     assert all_photos.status_code == 200
     assert len(all_photos.json()) == 1
     assert all_photos.json()[0]["tripId"] == trip_id
+
+
+@pytest.mark.asyncio
+async def test_notifications_for_friend_request_and_read_flow():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as alice_client, AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as bob_client:
+        alice_register = await alice_client.post(
+            "/api/auth/register",
+            json={"username": "alice", "displayName": "Alice", "password": "secret"},
+        )
+        bob_register = await bob_client.post(
+            "/api/auth/register",
+            json={"username": "bob", "displayName": "Bob", "password": "secret"},
+        )
+        assert alice_register.status_code == 201
+        assert bob_register.status_code == 201
+
+        alice_client.headers.update({"Authorization": f"Bearer {alice_register.json()['token']}"})
+        bob_client.headers.update({"Authorization": f"Bearer {bob_register.json()['token']}"})
+
+        sent = await bob_client.post("/api/social/friend-requests", json={"username": "alice"})
+        assert sent.status_code == 201
+
+        unread = await alice_client.get("/api/notifications/unread-count")
+        assert unread.status_code == 200
+        assert unread.json()["count"] == 1
+
+        notifications = await alice_client.get("/api/notifications")
+        assert notifications.status_code == 200
+        payload = notifications.json()
+        assert len(payload) >= 1
+        assert payload[0]["type"] == "friend_request_received"
+        assert payload[0]["isRead"] is False
+
+        mark = await alice_client.post("/api/notifications/read", json={"ids": [payload[0]["id"]]})
+        assert mark.status_code == 200
+        assert mark.json()["updated"] == 1
+
+        unread_after = await alice_client.get("/api/notifications/unread-count")
+        assert unread_after.status_code == 200
+        assert unread_after.json()["count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_trip_invite_creates_notification_for_invited_friend():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as alice_client, AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as bob_client:
+        alice_register = await alice_client.post(
+            "/api/auth/register",
+            json={"username": "alice", "displayName": "Alice", "password": "secret"},
+        )
+        bob_register = await bob_client.post(
+            "/api/auth/register",
+            json={"username": "bob", "displayName": "Bob", "password": "secret"},
+        )
+        assert alice_register.status_code == 201
+        assert bob_register.status_code == 201
+
+        alice_client.headers.update({"Authorization": f"Bearer {alice_register.json()['token']}"})
+        bob_client.headers.update({"Authorization": f"Bearer {bob_register.json()['token']}"})
+
+        request = await bob_client.post("/api/social/friend-requests", json={"username": "alice"})
+        assert request.status_code == 201
+        accepted = await alice_client.post(f"/api/social/friend-requests/{request.json()['id']}/accept")
+        assert accepted.status_code == 200
+
+        trip = await alice_client.post(
+            "/api/trips",
+            json={"name": "Iceland", "color": "#00AAFF", "visibility": "friends_only"},
+        )
+        assert trip.status_code == 201
+
+        invited = await alice_client.post(f"/api/trips/{trip.json()['id']}/members/{bob_register.json()['user']['id']}")
+        assert invited.status_code == 200
+
+        notifications = await bob_client.get("/api/notifications")
+        assert notifications.status_code == 200
+        trip_invites = [n for n in notifications.json() if n["type"] == "trip_invite"]
+        assert len(trip_invites) == 1
+        assert trip_invites[0]["payload"]["tripId"] == trip.json()["id"]

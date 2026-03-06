@@ -7,6 +7,7 @@ Uses aiosqlite for async SQLite access.
 
 from __future__ import annotations
 
+import json
 import aiosqlite
 from pathlib import Path
 
@@ -17,6 +18,8 @@ from models import (
     PhotoOut,
     Person, PersonCreate, PersonUpdate,
     UserOut, FriendOut, FriendRequestOut, ExpenseOut, UserUpdate,
+    NotificationOut,
+    ProfileFriendOut, ProfileMapPointOut, ProfileOut, ProfilePhotoOut, ProfileSearchResult, ProfileTripOut, ProfileUpdate,
     ShareLinkOut,
 )
 
@@ -98,7 +101,34 @@ CREATE TABLE IF NOT EXISTS users (
     person_id     INTEGER NOT NULL REFERENCES persons(id) ON DELETE RESTRICT,
     home_country  TEXT    NOT NULL DEFAULT '',
     home_currency TEXT    NOT NULL DEFAULT 'USD',
+    profile_theme TEXT    NOT NULL DEFAULT 'dark-matter',
+    about_me      TEXT    NOT NULL DEFAULT '',
+    show_world_map INTEGER NOT NULL DEFAULT 1,
+    show_featured_trips INTEGER NOT NULL DEFAULT 1,
+    show_favorite_photos INTEGER NOT NULL DEFAULT 1,
+    show_featured_friends INTEGER NOT NULL DEFAULT 1,
     created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS profile_featured_trips (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    trip_id    INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, trip_id)
+);
+
+CREATE TABLE IF NOT EXISTS profile_favorite_photos (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    photo_id   INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, photo_id)
+);
+
+CREATE TABLE IF NOT EXISTS profile_featured_friends (
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    friend_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sort_order   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, friend_user_id)
 );
 
 CREATE TABLE IF NOT EXISTS friend_requests (
@@ -116,6 +146,23 @@ CREATE TABLE IF NOT EXISTS friends (
     created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (user_id, friend_user_id)
 );
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type        TEXT    NOT NULL,
+    title       TEXT    NOT NULL,
+    message     TEXT    NOT NULL,
+    payload     TEXT    NOT NULL DEFAULT '{}',
+    is_read     INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created
+    ON notifications(user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread
+    ON notifications(user_id, is_read, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS trip_members (
     trip_id      INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
@@ -139,6 +186,15 @@ CREATE TABLE IF NOT EXISTS expenses (
     created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 """
+
+VALID_PROFILE_THEMES = {
+    "dark-matter",
+    "positron",
+    "voyager",
+    "oceanic",
+    "atlas-sand",
+    "pine-trail",
+}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -164,6 +220,7 @@ class Store:
         await self._db.commit()
 
     async def _migrate_schema(self) -> None:
+        await self._ensure_photos_trip_nullable()
         await self._ensure_column("trips", "user_id", "INTEGER")
         await self._ensure_column("trips", "visibility", "TEXT NOT NULL DEFAULT 'friends_only'")
         await self._ensure_column("photos", "user_id", "INTEGER")
@@ -172,11 +229,105 @@ class Store:
         await self._ensure_column("persons", "linked_user_id", "INTEGER")
         await self._ensure_column("users", "home_country", "TEXT NOT NULL DEFAULT ''")
         await self._ensure_column("users", "home_currency", "TEXT NOT NULL DEFAULT 'USD'")
+        await self._ensure_column("users", "profile_theme", "TEXT NOT NULL DEFAULT 'dark-matter'")
+        await self._ensure_column("users", "about_me", "TEXT NOT NULL DEFAULT ''")
+        await self._ensure_column("users", "show_world_map", "INTEGER NOT NULL DEFAULT 1")
+        await self._ensure_column("users", "show_featured_trips", "INTEGER NOT NULL DEFAULT 1")
+        await self._ensure_column("users", "show_favorite_photos", "INTEGER NOT NULL DEFAULT 1")
+        await self._ensure_column("users", "show_featured_friends", "INTEGER NOT NULL DEFAULT 1")
 
         await self.db.execute("UPDATE trips SET user_id = 1 WHERE user_id IS NULL")
         await self.db.execute("UPDATE photos SET user_id = 1 WHERE user_id IS NULL")
         await self.db.execute("UPDATE persons SET user_id = 1 WHERE user_id IS NULL")
         await self.db.execute("UPDATE trips SET visibility = 'friends_only' WHERE visibility IS NULL OR visibility = ''")
+
+        await self.db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS profile_featured_trips (
+                user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                trip_id    INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, trip_id)
+            )
+            """
+        )
+        await self.db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS profile_favorite_photos (
+                user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                photo_id   INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, photo_id)
+            )
+            """
+        )
+        await self.db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS profile_featured_friends (
+                user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                friend_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                sort_order   INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, friend_user_id)
+            )
+            """
+        )
+        await self.db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS notifications (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                type        TEXT    NOT NULL,
+                title       TEXT    NOT NULL,
+                message     TEXT    NOT NULL,
+                payload     TEXT    NOT NULL DEFAULT '{}',
+                is_read     INTEGER NOT NULL DEFAULT 0,
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        await self.db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC)"
+        )
+        await self.db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read, created_at DESC)"
+        )
+
+    async def _ensure_photos_trip_nullable(self) -> None:
+        rows = await self.db.execute_fetchall("PRAGMA table_info(photos)")
+        if not rows:
+            return
+
+        trip_col = next((r for r in rows if r["name"] == "trip_id"), None)
+        if not trip_col or int(trip_col["notnull"]) == 0:
+            return
+
+        await self.db.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS photos_new (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                trip_id   INTEGER REFERENCES trips(id) ON DELETE CASCADE,
+                user_id   INTEGER,
+                name      TEXT    NOT NULL,
+                filename  TEXT    NOT NULL,
+                mime      TEXT    NOT NULL DEFAULT 'image/jpeg',
+                width     INTEGER NOT NULL DEFAULT 0,
+                height    INTEGER NOT NULL DEFAULT 0,
+                lat       REAL,
+                lng       REAL,
+                place_id  INTEGER REFERENCES places(id) ON DELETE SET NULL,
+                taken_at  INTEGER,
+                url       TEXT    NOT NULL DEFAULT '',
+                thumb_url TEXT    NOT NULL DEFAULT ''
+            );
+
+            INSERT INTO photos_new (id, trip_id, user_id, name, filename, mime, width, height, lat, lng, place_id, taken_at, url, thumb_url)
+            SELECT id, trip_id, user_id, name, filename, mime, width, height, lat, lng, place_id, taken_at, url, thumb_url
+            FROM photos;
+
+            DROP TABLE photos;
+            ALTER TABLE photos_new RENAME TO photos;
+            """
+        )
 
     async def _ensure_column(self, table_name: str, column_name: str, column_def: str) -> None:
         rows = await self.db.execute_fetchall(f"PRAGMA table_info({table_name})")
@@ -205,8 +356,12 @@ class Store:
             person_id = int(cursor.lastrowid or 0)
 
         await self.db.execute(
-            "INSERT INTO users (id, username, display_name, password_hash, person_id, home_country, home_currency) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (1, "owner", "Owner", "", person_id, "", "USD"),
+            """
+            INSERT INTO users
+                (id, username, display_name, password_hash, person_id, home_country, home_currency, profile_theme, about_me, show_world_map, show_featured_trips, show_favorite_photos, show_featured_friends)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, 1)
+            """,
+            (1, "owner", "Owner", "", person_id, "", "USD", "dark-matter", ""),
         )
 
     async def close(self) -> None:
@@ -327,7 +482,7 @@ class Store:
         trip_id = row["id"]
         places = await self._get_places(trip_id)
         photos = await self._get_photos(trip_id, user_id)
-        person_ids = await self._get_trip_person_ids(trip_id)
+        person_ids = await self._get_trip_person_ids(trip_id, viewer_user_id=user_id, owner_user_id=row["user_id"])
         return Trip(
             id=row["id"],
             name=row["name"],
@@ -357,11 +512,48 @@ class Store:
     async def user_can_access_trip(self, user_id: int, trip_id: int) -> bool:
         return await self.user_is_trip_owner(user_id, trip_id) or await self.user_is_trip_member(user_id, trip_id)
 
-    async def _get_trip_person_ids(self, trip_id: int) -> list[int]:
-        rows = await self.db.execute_fetchall(
+    async def _get_trip_person_ids(self, trip_id: int, viewer_user_id: int, owner_user_id: int) -> list[int]:
+        """
+        Return person IDs that should map to this trip for the current viewer.
+
+        - Owners see explicit trip_person assignments plus owner/member mappings.
+        - Shared members get IDs mapped into *their* person list so person filtering works.
+        """
+        person_ids: set[int] = set()
+
+        # Explicit trip-person assignments exist in the owner's person namespace.
+        explicit_rows = await self.db.execute_fetchall(
             "SELECT person_id FROM trip_persons WHERE trip_id = ?", (trip_id,)
         )
-        return [r["person_id"] for r in rows]
+        if viewer_user_id == owner_user_id:
+            person_ids.update(r["person_id"] for r in explicit_rows)
+
+        # Include owner user mapped to viewer's person list.
+        owner_person_rows = await self.db.execute_fetchall(
+            """
+            SELECT id
+            FROM persons
+            WHERE user_id = ?
+              AND ((is_owner = 1 AND ? = ?) OR linked_user_id = ?)
+            """,
+            (viewer_user_id, viewer_user_id, owner_user_id, owner_user_id),
+        )
+        person_ids.update(r["id"] for r in owner_person_rows)
+
+        # Include trip member users mapped to viewer's linked friend persons.
+        member_rows = await self.db.execute_fetchall(
+            "SELECT user_id FROM trip_members WHERE trip_id = ?", (trip_id,)
+        )
+        member_user_ids = [r["user_id"] for r in member_rows]
+        if member_user_ids:
+            placeholders = ",".join(["?"] * len(member_user_ids))
+            member_person_rows = await self.db.execute_fetchall(
+                f"SELECT id FROM persons WHERE user_id = ? AND linked_user_id IN ({placeholders})",
+                (viewer_user_id, *member_user_ids),
+            )
+            person_ids.update(r["id"] for r in member_person_rows)
+
+        return sorted(person_ids)
 
     # ── Places ────────────────────────────────────────────────────────────
 
@@ -676,6 +868,10 @@ class Store:
         if not fields:
             return await self.get_user_by_id(user_id)
 
+        theme_value = fields.get("profileTheme", fields.get("profile_theme"))
+        if theme_value is not None and theme_value not in VALID_PROFILE_THEMES:
+            raise ValueError("Invalid profile theme")
+
         col_map = {
             "displayName": "display_name",
             "homeCountry": "home_country",
@@ -714,6 +910,7 @@ class Store:
             personId=row["person_id"],
             homeCountry=row["home_country"],
             homeCurrency=row["home_currency"],
+            profileTheme=row["profile_theme"],
             createdAt=row["created_at"],
         )
 
@@ -736,6 +933,7 @@ class Store:
             personId=row["person_id"],
             homeCountry=row["home_country"],
             homeCurrency=row["home_currency"],
+            profileTheme=row["profile_theme"],
             createdAt=row["created_at"],
         )
 
@@ -744,6 +942,451 @@ class Store:
         known = {r["currency"] for r in rows if r["currency"]}
         known.update({"USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY", "INR"})
         return sorted(known)
+
+    # ── Profiles ──────────────────────────────────────────────────────────
+
+    async def get_profile_by_username(self, viewer_user_id: int, username: str) -> ProfileOut | None:
+        async with self.db.execute("SELECT * FROM users WHERE username = ?", (username,)) as cursor:
+            user = await cursor.fetchone()
+        if not user:
+            return None
+        return await self._build_profile(viewer_user_id, user["id"])
+
+    async def get_profile_by_user_id(self, viewer_user_id: int, profile_user_id: int) -> ProfileOut | None:
+        async with self.db.execute("SELECT id FROM users WHERE id = ?", (profile_user_id,)) as cursor:
+            user = await cursor.fetchone()
+        if not user:
+            return None
+        return await self._build_profile(viewer_user_id, profile_user_id)
+
+    async def _build_profile(self, viewer_user_id: int, profile_user_id: int) -> ProfileOut:
+        async with self.db.execute("SELECT * FROM users WHERE id = ?", (profile_user_id,)) as cursor:
+            user = await cursor.fetchone()
+        assert user is not None
+
+        featured_rows = await self.db.execute_fetchall(
+            """
+            SELECT t.id, t.name, t.color,
+                   (SELECT COUNT(*) FROM places p WHERE p.trip_id = t.id) AS places_count,
+                   (SELECT COUNT(*) FROM photos ph WHERE ph.trip_id = t.id) AS photos_count
+            FROM profile_featured_trips pft
+            JOIN trips t ON t.id = pft.trip_id
+            WHERE pft.user_id = ?
+            ORDER BY pft.sort_order, t.id
+            """,
+            (profile_user_id,),
+        )
+        featured_trips = [
+            ProfileTripOut(
+                id=r["id"],
+                name=r["name"],
+                color=r["color"],
+                placesCount=int(r["places_count"]),
+                photosCount=int(r["photos_count"]),
+            )
+            for r in featured_rows
+        ]
+
+        photo_rows = await self.db.execute_fetchall(
+            """
+            SELECT ph.id, ph.name, ph.url, ph.thumb_url
+            FROM profile_favorite_photos pfp
+            JOIN photos ph ON ph.id = pfp.photo_id
+            WHERE pfp.user_id = ?
+            ORDER BY pfp.sort_order, ph.id
+            """,
+            (profile_user_id,),
+        )
+        favorite_photos = [
+            ProfilePhotoOut(
+                id=r["id"],
+                name=r["name"],
+                url=r["url"],
+                thumbUrl=r["thumb_url"],
+            )
+            for r in photo_rows
+        ]
+
+        friend_rows = await self.db.execute_fetchall(
+            """
+            SELECT u.id, u.username, u.display_name, u.home_country, u.home_currency
+            FROM profile_featured_friends pff
+            JOIN users u ON u.id = pff.friend_user_id
+            WHERE pff.user_id = ?
+            ORDER BY pff.sort_order, u.display_name
+            """,
+            (profile_user_id,),
+        )
+        featured_friends = [
+            ProfileFriendOut(
+                userId=r["id"],
+                username=r["username"],
+                displayName=r["display_name"],
+                homeCountry=r["home_country"],
+                homeCurrency=r["home_currency"],
+            )
+            for r in friend_rows
+        ]
+
+        map_rows = await self.db.execute_fetchall(
+            """
+            SELECT p.id AS place_id, p.lat, p.lng, p.sort_order,
+                   t.id AS trip_id, t.name AS trip_name, t.color AS trip_color
+            FROM trips t
+            JOIN places p ON p.trip_id = t.id
+            WHERE t.user_id = ?
+            ORDER BY t.id DESC, p.sort_order, p.id
+            LIMIT 800
+            """,
+            (profile_user_id,),
+        )
+        map_places = [
+            ProfileMapPointOut(
+                placeId=r["place_id"],
+                tripId=r["trip_id"],
+                tripName=r["trip_name"],
+                tripColor=r["trip_color"],
+                lat=float(r["lat"]),
+                lng=float(r["lng"]),
+                sortOrder=int(r["sort_order"]),
+            )
+            for r in map_rows
+        ]
+
+        return ProfileOut(
+            userId=user["id"],
+            username=user["username"],
+            displayName=user["display_name"],
+            homeCountry=user["home_country"],
+            homeCurrency=user["home_currency"],
+            profileTheme=user["profile_theme"],
+            aboutMe=user["about_me"],
+            showWorldMap=bool(user["show_world_map"]),
+            showFeaturedTrips=bool(user["show_featured_trips"]),
+            showFavoritePhotos=bool(user["show_favorite_photos"]),
+            showFeaturedFriends=bool(user["show_featured_friends"]),
+            featuredTrips=featured_trips,
+            featuredFriends=featured_friends,
+            favoritePhotos=favorite_photos,
+            mapPlaces=map_places,
+            isSelf=viewer_user_id == user["id"],
+        )
+
+    async def search_profiles(self, query: str, viewer_user_id: int, limit: int = 25) -> list[ProfileSearchResult]:
+        term = f"%{query.strip()}%"
+        rows = await self.db.execute_fetchall(
+            """
+            SELECT u.id, u.username, u.display_name, u.profile_theme, u.about_me,
+                   CASE WHEN f.user_id IS NULL THEN 0 ELSE 1 END AS is_friend
+            FROM users u
+            LEFT JOIN friends f ON f.user_id = ? AND f.friend_user_id = u.id
+            WHERE u.username LIKE ? OR u.display_name LIKE ?
+            ORDER BY is_friend DESC, u.display_name ASC
+            LIMIT ?
+            """,
+            (viewer_user_id, term, term, limit),
+        )
+        return [
+            ProfileSearchResult(
+                userId=r["id"],
+                username=r["username"],
+                displayName=r["display_name"],
+                profileTheme=r["profile_theme"],
+                aboutMe=r["about_me"] or "",
+                isFriend=bool(r["is_friend"]),
+            )
+            for r in rows
+        ]
+
+    async def update_profile(self, user_id: int, data: ProfileUpdate) -> ProfileOut:
+        fields = data.model_dump(exclude_none=True)
+        if not fields:
+            profile = await self.get_profile_by_user_id(user_id, user_id)
+            assert profile is not None
+            return profile
+
+        theme_value = fields.get("profileTheme", fields.get("profile_theme"))
+        if theme_value is not None and theme_value not in VALID_PROFILE_THEMES:
+            raise ValueError("Invalid profile theme")
+
+        about = fields.get("aboutMe", fields.get("about_me"))
+        if about is not None and len(about) > 600:
+            raise ValueError("About me is too long (max 600)")
+
+        user_update_data = {
+            "displayName": fields.get("displayName", fields.get("display_name")),
+            "homeCountry": fields.get("homeCountry", fields.get("home_country")),
+            "homeCurrency": fields.get("homeCurrency", fields.get("home_currency")),
+            "profileTheme": theme_value,
+        }
+        await self.update_user(user_id, UserUpdate(**{k: v for k, v in user_update_data.items() if v is not None}))
+
+        profile_updates = []
+        profile_vals = []
+        col_map = {
+            "aboutMe": "about_me",
+            "about_me": "about_me",
+            "showWorldMap": "show_world_map",
+            "show_world_map": "show_world_map",
+            "showFeaturedTrips": "show_featured_trips",
+            "show_featured_trips": "show_featured_trips",
+            "showFavoritePhotos": "show_favorite_photos",
+            "show_favorite_photos": "show_favorite_photos",
+            "showFeaturedFriends": "show_featured_friends",
+            "show_featured_friends": "show_featured_friends",
+        }
+        for key, val in fields.items():
+            col = col_map.get(key)
+            if not col:
+                continue
+            profile_updates.append(f"{col} = ?")
+            if isinstance(val, bool):
+                profile_vals.append(1 if val else 0)
+            else:
+                profile_vals.append(val)
+
+        if profile_updates:
+            profile_vals.append(user_id)
+            await self.db.execute(f"UPDATE users SET {', '.join(profile_updates)} WHERE id = ?", profile_vals)
+            await self.db.commit()
+
+        profile = await self.get_profile_by_user_id(user_id, user_id)
+        assert profile is not None
+        return profile
+
+    async def set_profile_featured_trips(self, user_id: int, trip_ids: list[int]) -> list[ProfileTripOut]:
+        clean_ids = list(dict.fromkeys([int(tid) for tid in trip_ids if tid]))
+        if len(clean_ids) > 8:
+            raise ValueError("You can feature at most 8 trips")
+
+        if clean_ids:
+            placeholders = ",".join(["?"] * len(clean_ids))
+            rows = await self.db.execute_fetchall(
+                f"SELECT id FROM trips WHERE user_id = ? AND id IN ({placeholders})",
+                (user_id, *clean_ids),
+            )
+            existing = {r["id"] for r in rows}
+            if existing != set(clean_ids):
+                raise ValueError("All featured trips must belong to you")
+
+        await self.db.execute("DELETE FROM profile_featured_trips WHERE user_id = ?", (user_id,))
+        for idx, trip_id in enumerate(clean_ids):
+            await self.db.execute(
+                "INSERT INTO profile_featured_trips (user_id, trip_id, sort_order) VALUES (?, ?, ?)",
+                (user_id, trip_id, idx),
+            )
+        await self.db.commit()
+
+        profile = await self.get_profile_by_user_id(user_id, user_id)
+        assert profile is not None
+        return profile.featured_trips
+
+    async def set_profile_favorite_photos(self, user_id: int, photo_ids: list[int]) -> list[ProfilePhotoOut]:
+        clean_ids = list(dict.fromkeys([int(pid) for pid in photo_ids if pid]))
+        if len(clean_ids) > 6:
+            raise ValueError("You can feature between 1 and 6 photos")
+
+        if clean_ids:
+            placeholders = ",".join(["?"] * len(clean_ids))
+            rows = await self.db.execute_fetchall(
+                f"SELECT id FROM photos WHERE user_id = ? AND id IN ({placeholders})",
+                (user_id, *clean_ids),
+            )
+            existing = {r["id"] for r in rows}
+            if existing != set(clean_ids):
+                raise ValueError("All favorite photos must belong to you")
+
+        await self.db.execute("DELETE FROM profile_favorite_photos WHERE user_id = ?", (user_id,))
+        for idx, photo_id in enumerate(clean_ids):
+            await self.db.execute(
+                "INSERT INTO profile_favorite_photos (user_id, photo_id, sort_order) VALUES (?, ?, ?)",
+                (user_id, photo_id, idx),
+            )
+        await self.db.commit()
+
+        profile = await self.get_profile_by_user_id(user_id, user_id)
+        assert profile is not None
+        return profile.favorite_photos
+
+    async def set_profile_featured_friends(self, user_id: int, friend_user_ids: list[int]) -> list[ProfileFriendOut]:
+        clean_ids = list(dict.fromkeys([int(fid) for fid in friend_user_ids if fid]))
+        if len(clean_ids) > 12:
+            raise ValueError("You can feature at most 12 friends")
+
+        if clean_ids:
+            placeholders = ",".join(["?"] * len(clean_ids))
+            rows = await self.db.execute_fetchall(
+                f"SELECT friend_user_id FROM friends WHERE user_id = ? AND friend_user_id IN ({placeholders})",
+                (user_id, *clean_ids),
+            )
+            existing = {r["friend_user_id"] for r in rows}
+            if existing != set(clean_ids):
+                raise ValueError("All featured friends must be your friends")
+
+        await self.db.execute("DELETE FROM profile_featured_friends WHERE user_id = ?", (user_id,))
+        for idx, fid in enumerate(clean_ids):
+            await self.db.execute(
+                "INSERT INTO profile_featured_friends (user_id, friend_user_id, sort_order) VALUES (?, ?, ?)",
+                (user_id, fid, idx),
+            )
+        await self.db.commit()
+
+        profile = await self.get_profile_by_user_id(user_id, user_id)
+        assert profile is not None
+        return profile.featured_friends
+
+    async def get_profile_options(self, user_id: int) -> dict:
+        trips_rows = await self.db.execute_fetchall(
+            """
+            SELECT t.id, t.name, t.color,
+                   (SELECT COUNT(*) FROM places p WHERE p.trip_id = t.id) AS places_count,
+                   (SELECT COUNT(*) FROM photos ph WHERE ph.trip_id = t.id) AS photos_count
+            FROM trips t
+            WHERE t.user_id = ?
+            ORDER BY t.id DESC
+            """,
+            (user_id,),
+        )
+        photos_rows = await self.db.execute_fetchall(
+            "SELECT id, name, url, thumb_url FROM photos WHERE user_id = ? ORDER BY id DESC LIMIT 150",
+            (user_id,),
+        )
+        friends_rows = await self.db.execute_fetchall(
+            """
+            SELECT u.id, u.username, u.display_name, u.home_country, u.home_currency
+            FROM friends f
+            JOIN users u ON u.id = f.friend_user_id
+            WHERE f.user_id = ?
+            ORDER BY u.display_name
+            """,
+            (user_id,),
+        )
+        return {
+            "trips": [
+                ProfileTripOut(
+                    id=r["id"],
+                    name=r["name"],
+                    color=r["color"],
+                    placesCount=int(r["places_count"]),
+                    photosCount=int(r["photos_count"]),
+                ).model_dump(by_alias=True)
+                for r in trips_rows
+            ],
+            "photos": [
+                ProfilePhotoOut(
+                    id=r["id"],
+                    name=r["name"],
+                    url=r["url"],
+                    thumbUrl=r["thumb_url"],
+                ).model_dump(by_alias=True)
+                for r in photos_rows
+            ],
+            "friends": [
+                ProfileFriendOut(
+                    userId=r["id"],
+                    username=r["username"],
+                    displayName=r["display_name"],
+                    homeCountry=r["home_country"],
+                    homeCurrency=r["home_currency"],
+                ).model_dump(by_alias=True)
+                for r in friends_rows
+            ],
+            "themes": sorted(VALID_PROFILE_THEMES),
+        }
+
+    # ── Notifications ─────────────────────────────────────────────────────
+
+    async def create_notification(
+        self,
+        user_id: int,
+        notification_type: str,
+        title: str,
+        message: str,
+        payload: dict | None = None,
+        *,
+        commit: bool = True,
+    ) -> int:
+        payload_json = json.dumps(payload or {}, separators=(",", ":"))
+        cursor = await self.db.execute(
+            """
+            INSERT INTO notifications (user_id, type, title, message, payload, is_read)
+            VALUES (?, ?, ?, ?, ?, 0)
+            """,
+            (user_id, notification_type, title, message, payload_json),
+        )
+        if commit:
+            await self.db.commit()
+        return int(cursor.lastrowid or 0)
+
+    async def list_notifications(
+        self,
+        user_id: int,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        unread_only: bool = False,
+    ) -> list[NotificationOut]:
+        safe_limit = max(1, min(limit, 100))
+        safe_offset = max(0, offset)
+        where_clause = "WHERE user_id = ?" if not unread_only else "WHERE user_id = ? AND is_read = 0"
+        rows = await self.db.execute_fetchall(
+            f"""
+            SELECT id, type, title, message, payload, is_read, created_at
+            FROM notifications
+            {where_clause}
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (user_id, safe_limit, safe_offset),
+        )
+        result = []
+        for row in rows:
+            payload: dict
+            try:
+                decoded = json.loads(row["payload"] or "{}")
+                payload = decoded if isinstance(decoded, dict) else {}
+            except json.JSONDecodeError:
+                payload = {}
+            result.append(
+                NotificationOut(
+                    id=row["id"],
+                    type=row["type"],
+                    title=row["title"],
+                    message=row["message"],
+                    payload=payload,
+                    isRead=bool(row["is_read"]),
+                    createdAt=row["created_at"],
+                )
+            )
+        return result
+
+    async def get_unread_notification_count(self, user_id: int) -> int:
+        async with self.db.execute(
+            "SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND is_read = 0",
+            (user_id,),
+        ) as cursor:
+            row = await cursor.fetchone()
+        return int(row["count"] if row else 0)
+
+    async def mark_notifications_read(self, user_id: int, notification_ids: list[int]) -> int:
+        ids = list(dict.fromkeys([int(nid) for nid in notification_ids if nid]))
+        if not ids:
+            return 0
+        placeholders = ",".join(["?"] * len(ids))
+        cursor = await self.db.execute(
+            f"UPDATE notifications SET is_read = 1 WHERE user_id = ? AND id IN ({placeholders})",
+            (user_id, *ids),
+        )
+        await self.db.commit()
+        return int(cursor.rowcount or 0)
+
+    async def mark_all_notifications_read(self, user_id: int) -> int:
+        cursor = await self.db.execute(
+            "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0",
+            (user_id,),
+        )
+        await self.db.commit()
+        return int(cursor.rowcount or 0)
 
     # ── Friends ───────────────────────────────────────────────────────────
 
@@ -776,9 +1419,11 @@ class Store:
         await self.db.commit()
         async with self.db.execute(
             """
-            SELECT fr.*, u.username AS from_username, u.display_name AS from_display_name
+            SELECT fr.*, u.username AS from_username, u.display_name AS from_display_name,
+                   tu.username AS to_username, tu.display_name AS to_display_name
             FROM friend_requests fr
             JOIN users u ON u.id = fr.from_user_id
+            JOIN users tu ON tu.id = fr.to_user_id
             WHERE fr.id = ?
             """,
             (int(cursor.lastrowid or 0),),
@@ -787,21 +1432,36 @@ class Store:
         if not row:
             async with self.db.execute(
                 """
-                SELECT fr.*, u.username AS from_username, u.display_name AS from_display_name
+                SELECT fr.*, u.username AS from_username, u.display_name AS from_display_name,
+                       tu.username AS to_username, tu.display_name AS to_display_name
                 FROM friend_requests fr
                 JOIN users u ON u.id = fr.from_user_id
+                JOIN users tu ON tu.id = fr.to_user_id
                 WHERE fr.from_user_id = ? AND fr.to_user_id = ?
                 """,
                 (from_user_id, target.id),
             ) as c2:
                 row = await c2.fetchone()
         assert row is not None
+        await self.create_notification(
+            target.id,
+            "friend_request_received",
+            "New friend request",
+            f"{row['from_display_name']} sent you a friend request.",
+            payload={
+                "requestId": row["id"],
+                "fromUserId": row["from_user_id"],
+                "fromUsername": row["from_username"],
+            },
+        )
         return FriendRequestOut(
             id=row["id"],
             fromUserId=row["from_user_id"],
             toUserId=row["to_user_id"],
             fromUsername=row["from_username"],
             fromDisplayName=row["from_display_name"],
+            toUsername=row["to_username"],
+            toDisplayName=row["to_display_name"],
             status=row["status"],
             createdAt=row["created_at"],
         )
@@ -809,9 +1469,11 @@ class Store:
     async def list_friend_requests_for_user(self, user_id: int) -> list[FriendRequestOut]:
         rows = await self.db.execute_fetchall(
             """
-            SELECT fr.*, u.username AS from_username, u.display_name AS from_display_name
+            SELECT fr.*, u.username AS from_username, u.display_name AS from_display_name,
+                   tu.username AS to_username, tu.display_name AS to_display_name
             FROM friend_requests fr
             JOIN users u ON u.id = fr.from_user_id
+            JOIN users tu ON tu.id = fr.to_user_id
             WHERE fr.to_user_id = ? AND fr.status = 'pending'
             ORDER BY fr.id DESC
             """,
@@ -824,6 +1486,36 @@ class Store:
                 toUserId=r["to_user_id"],
                 fromUsername=r["from_username"],
                 fromDisplayName=r["from_display_name"],
+                toUsername=r["to_username"],
+                toDisplayName=r["to_display_name"],
+                status=r["status"],
+                createdAt=r["created_at"],
+            )
+            for r in rows
+        ]
+
+    async def list_outgoing_friend_requests_for_user(self, user_id: int) -> list[FriendRequestOut]:
+        rows = await self.db.execute_fetchall(
+            """
+            SELECT fr.*, fu.username AS from_username, fu.display_name AS from_display_name,
+                   tu.username AS to_username, tu.display_name AS to_display_name
+            FROM friend_requests fr
+            JOIN users fu ON fu.id = fr.from_user_id
+            JOIN users tu ON tu.id = fr.to_user_id
+            WHERE fr.from_user_id = ? AND fr.status = 'pending'
+            ORDER BY fr.id DESC
+            """,
+            (user_id,),
+        )
+        return [
+            FriendRequestOut(
+                id=r["id"],
+                fromUserId=r["from_user_id"],
+                toUserId=r["to_user_id"],
+                fromUsername=r["from_username"],
+                fromDisplayName=r["from_display_name"],
+                toUsername=r["to_username"],
+                toDisplayName=r["to_display_name"],
                 status=r["status"],
                 createdAt=r["created_at"],
             )
@@ -851,8 +1543,38 @@ class Store:
         )
         await self._ensure_friend_person(from_user_id, user_id)
         await self._ensure_friend_person(user_id, from_user_id)
+        to_user = await self.get_user_by_id(user_id)
+        if to_user:
+            await self.create_notification(
+                from_user_id,
+                "friend_request_accepted",
+                "Friend request accepted",
+                f"{to_user.display_name} accepted your friend request.",
+                payload={
+                    "requestId": request_id,
+                    "userId": to_user.id,
+                    "username": to_user.username,
+                },
+                commit=False,
+            )
         await self.db.commit()
         return True
+
+    async def decline_friend_request(self, request_id: int, user_id: int) -> bool:
+        cursor = await self.db.execute(
+            "UPDATE friend_requests SET status = 'declined' WHERE id = ? AND to_user_id = ? AND status = 'pending'",
+            (request_id, user_id),
+        )
+        await self.db.commit()
+        return cursor.rowcount > 0
+
+    async def cancel_outgoing_friend_request(self, request_id: int, user_id: int) -> bool:
+        cursor = await self.db.execute(
+            "DELETE FROM friend_requests WHERE id = ? AND from_user_id = ? AND status = 'pending'",
+            (request_id, user_id),
+        )
+        await self.db.commit()
+        return cursor.rowcount > 0
 
     async def _ensure_friend_person(self, owner_user_id: int, friend_user_id: int) -> None:
         friend = await self.get_user_by_id(friend_user_id)
@@ -897,6 +1619,72 @@ class Store:
             for r in rows
         ]
 
+    async def remove_friend(self, user_id: int, friend_user_id: int) -> bool:
+        removed = False
+        cursor_a = await self.db.execute(
+            "DELETE FROM friends WHERE user_id = ? AND friend_user_id = ?",
+            (user_id, friend_user_id),
+        )
+        cursor_b = await self.db.execute(
+            "DELETE FROM friends WHERE user_id = ? AND friend_user_id = ?",
+            (friend_user_id, user_id),
+        )
+        removed = cursor_a.rowcount > 0 or cursor_b.rowcount > 0
+
+        await self.db.execute(
+            "DELETE FROM persons WHERE user_id = ? AND linked_user_id = ? AND is_owner = 0",
+            (user_id, friend_user_id),
+        )
+        await self.db.execute(
+            "DELETE FROM persons WHERE user_id = ? AND linked_user_id = ? AND is_owner = 0",
+            (friend_user_id, user_id),
+        )
+        await self.db.execute(
+            "DELETE FROM profile_featured_friends WHERE user_id = ? AND friend_user_id = ?",
+            (user_id, friend_user_id),
+        )
+        await self.db.execute(
+            "DELETE FROM profile_featured_friends WHERE user_id = ? AND friend_user_id = ?",
+            (friend_user_id, user_id),
+        )
+        await self.db.commit()
+        return removed
+
+    async def search_users(self, query: str, viewer_user_id: int, limit: int = 25) -> list[dict]:
+        term = f"%{query.strip()}%"
+        rows = await self.db.execute_fetchall(
+            """
+            SELECT u.id, u.username, u.display_name, u.home_country, u.home_currency,
+                   CASE WHEN f.user_id IS NULL THEN 0 ELSE 1 END AS is_friend,
+                   CASE WHEN incoming.id IS NULL THEN 0 ELSE 1 END AS has_incoming,
+                   CASE WHEN outgoing.id IS NULL THEN 0 ELSE 1 END AS has_outgoing
+            FROM users u
+            LEFT JOIN friends f ON f.user_id = ? AND f.friend_user_id = u.id
+            LEFT JOIN friend_requests incoming
+                ON incoming.from_user_id = u.id AND incoming.to_user_id = ? AND incoming.status = 'pending'
+            LEFT JOIN friend_requests outgoing
+                ON outgoing.from_user_id = ? AND outgoing.to_user_id = u.id AND outgoing.status = 'pending'
+            WHERE u.id != ?
+              AND (u.username LIKE ? OR u.display_name LIKE ?)
+            ORDER BY is_friend DESC, u.display_name ASC
+            LIMIT ?
+            """,
+            (viewer_user_id, viewer_user_id, viewer_user_id, viewer_user_id, term, term, limit),
+        )
+        return [
+            {
+                "id": r["id"],
+                "username": r["username"],
+                "displayName": r["display_name"],
+                "homeCountry": r["home_country"],
+                "homeCurrency": r["home_currency"],
+                "isFriend": bool(r["is_friend"]),
+                "hasIncoming": bool(r["has_incoming"]),
+                "hasOutgoing": bool(r["has_outgoing"]),
+            }
+            for r in rows
+        ]
+
     # ── Trip Members ──────────────────────────────────────────────────────
 
     async def invite_friend_to_trip(self, owner_user_id: int, trip_id: int, friend_user_id: int) -> bool:
@@ -904,10 +1692,24 @@ class Store:
             return False
         if not await self.are_friends(owner_user_id, friend_user_id):
             return False
+        async with self.db.execute("SELECT name FROM trips WHERE id = ?", (trip_id,)) as cursor:
+            trip_row = await cursor.fetchone()
+        if not trip_row:
+            return False
+        owner = await self.get_user_by_id(owner_user_id)
         await self.db.execute(
             "INSERT OR IGNORE INTO trip_members (trip_id, user_id, role) VALUES (?, ?, 'member')",
             (trip_id, friend_user_id),
         )
+        if owner:
+            await self.create_notification(
+                friend_user_id,
+                "trip_invite",
+                "Trip invite",
+                f"{owner.display_name} invited you to '{trip_row['name']}'.",
+                payload={"tripId": trip_id, "ownerUserId": owner_user_id},
+                commit=False,
+            )
         await self.db.commit()
         return True
 

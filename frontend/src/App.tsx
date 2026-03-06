@@ -11,6 +11,9 @@ import { AlbumDetailPage } from './pages/AlbumDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SharePage } from './pages/SharePage';
 import { LoginPage } from './pages/LoginPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { ProfilesPage } from './pages/ProfilesPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { useAuthStore } from './store/useAuthStore';
 
 const ProtectedLayout = () => {
@@ -39,6 +42,9 @@ function App() {
           <Route path="trips" element={<ManageTripsPage />} />
           <Route path="trips/:id" element={<TripDetailPage />} />
           <Route path="people" element={<ManagePersonsPage />} />
+          <Route path="profiles" element={<ProfilesPage />} />
+          <Route path="profiles/:username" element={<ProfilePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

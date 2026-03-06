@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -6,9 +7,12 @@ import {
     Images,
     Plane,
     Users,
+    UserCircle2,
+    Bell,
     Settings,
     MapPin
 } from 'lucide-react';
+import * as api from '../../api/client';
 import styles from './Navigation.module.css';
 
 /**
@@ -19,6 +23,30 @@ import styles from './Navigation.module.css';
  */
 
 export const Navigation = () => {
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const { count } = await api.getUnreadNotificationCount();
+                if (active) {
+                    setUnreadCount(count);
+                }
+            } catch {
+                if (active) {
+                    setUnreadCount(0);
+                }
+            }
+        };
+        load();
+        const timer = window.setInterval(load, 30000);
+        return () => {
+            active = false;
+            window.clearInterval(timer);
+        };
+    }, []);
+
     return (
         <nav className={styles.nav}>
             <div className={styles.logo}>
@@ -132,6 +160,51 @@ export const Navigation = () => {
                             )}
                             <span className={styles.icon}><Users size={24} /></span>
                             <span className={styles.label}>People</span>
+                        </>
+                    )}
+                </NavLink>
+
+                <NavLink
+                    to="/notifications"
+                    className={({ isActive }) =>
+                        isActive ? `${styles.item} ${styles.active}` : styles.item
+                    }
+                >
+                    {({ isActive }) => (
+                        <>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="navPill"
+                                    className={styles.activePill}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <span className={styles.iconWrap}>
+                                <span className={styles.icon}><Bell size={24} /></span>
+                                {unreadCount > 0 && <span className={styles.badge}>{Math.min(unreadCount, 99)}</span>}
+                            </span>
+                            <span className={styles.label}>Notifications</span>
+                        </>
+                    )}
+                </NavLink>
+
+                <NavLink
+                    to="/profiles"
+                    className={({ isActive }) =>
+                        isActive ? `${styles.item} ${styles.active}` : styles.item
+                    }
+                >
+                    {({ isActive }) => (
+                        <>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="navPill"
+                                    className={styles.activePill}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <span className={styles.icon}><UserCircle2 size={24} /></span>
+                            <span className={styles.label}>Profiles</span>
                         </>
                     )}
                 </NavLink>

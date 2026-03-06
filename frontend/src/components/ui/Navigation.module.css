@@ -117,6 +117,30 @@
     z-index: 1;
 }
 
+.iconWrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.badge {
+    position: absolute;
+    right: -8px;
+    top: -6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    color: var(--md-sys-color-on-error);
+    background: var(--md-sys-color-error);
+    border: 1px solid var(--md-sys-color-surface-container-low);
+    z-index: 2;
+}
+
 /* Label as tooltip positioned to the right of the rail */
 .label {
     position: absolute;

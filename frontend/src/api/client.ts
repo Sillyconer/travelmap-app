@@ -3,16 +3,23 @@ import type {
     Expense,
     Friend,
     FriendRequest,
+    NotificationItem,
     Person,
     PersonCreate,
     PersonUpdate,
     Place,
+    Profile,
+    ProfileFriend,
+    ProfilePhoto,
+    ProfileSearchResult,
+    ProfileTrip,
     PlaceCreate,
     PlaceUpdate,
     Trip,
     TripCreate,
     TripUpdate,
     User,
+    UserSearchResult,
 } from '../types/models';
 
 function getStoredToken(): string | null {
@@ -64,6 +71,29 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return res.json() as Promise<T>;
 }
 
+async function fetchBlob(endpoint: string): Promise<Blob> {
+    const token = getStoredToken();
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'GET',
+        headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+    });
+
+    if (!res.ok) {
+        let msg = res.statusText;
+        try {
+            const data = await res.json();
+            msg = data.detail || msg;
+        } catch {
+            // ignore parse error
+        }
+        throw new ApiError(msg, res.status);
+    }
+
+    return res.blob();
+}
+
 // ── Trips ──
 export const getTrips = () => fetcher<Trip[]>('/trips');
 export const getTrip = (id: number) => fetcher<Trip>(`/trips/${id}`);
@@ -99,6 +129,8 @@ export const clearAllPhotos = () => fetcher<{ removed: number }>('/photos', { me
 export const uploadUnattachedPhoto = (formData: FormData) => fetcher<any>('/photos/upload', { method: 'POST', body: formData });
 export const assignPhoto = (photoId: number, tripId: number | null, placeId: number | null) =>
     fetcher<any>(`/photos/${photoId}/assign`, { method: 'POST', body: JSON.stringify({ tripId, placeId }) });
+export const downloadTripPhotosZip = (tripId: number, photoIds?: number[]) =>
+    fetchBlob(`/trips/${tripId}/photos/download${photoIds && photoIds.length > 0 ? `?ids=${encodeURIComponent(photoIds.join(','))}` : ''}`);
 
 // ── Auth ──
 export const register = (data: { username: string; displayName: string; password: string }) =>
@@ -112,10 +144,49 @@ export const updateMe = (data: Partial<Pick<User, 'displayName' | 'homeCountry' 
 // ── Social ──
 export const getFriends = () => fetcher<Friend[]>('/social/friends');
 export const getFriendRequests = () => fetcher<FriendRequest[]>('/social/friend-requests');
+export const getOutgoingFriendRequests = () => fetcher<FriendRequest[]>('/social/friend-requests/outgoing');
 export const sendFriendRequest = (username: string) =>
     fetcher<FriendRequest>('/social/friend-requests', { method: 'POST', body: JSON.stringify({ username }) });
 export const acceptFriendRequest = (requestId: number) =>
     fetcher<{ ok: boolean }>(`/social/friend-requests/${requestId}/accept`, { method: 'POST' });
+export const declineFriendRequest = (requestId: number) =>
+    fetcher<{ ok: boolean }>(`/social/friend-requests/${requestId}/decline`, { method: 'POST' });
+export const cancelFriendRequest = (requestId: number) =>
+    fetcher<{ ok: boolean }>(`/social/friend-requests/${requestId}`, { method: 'DELETE' });
+export const removeFriend = (friendUserId: number) =>
+    fetcher<{ ok: boolean }>(`/social/friends/${friendUserId}`, { method: 'DELETE' });
+export const searchUsers = (query: string, limit = 25) =>
+    fetcher<UserSearchResult[]>(`/social/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+
+// ── Notifications ──
+export const getNotifications = (options?: { limit?: number; offset?: number; unreadOnly?: boolean }) => {
+    const params = new URLSearchParams();
+    if (options?.limit !== undefined) params.set('limit', String(options.limit));
+    if (options?.offset !== undefined) params.set('offset', String(options.offset));
+    if (options?.unreadOnly !== undefined) params.set('unread_only', String(options.unreadOnly));
+    const qs = params.toString();
+    return fetcher<NotificationItem[]>(`/notifications${qs ? `?${qs}` : ''}`);
+};
+export const getUnreadNotificationCount = () => fetcher<{ count: number }>('/notifications/unread-count');
+export const markNotificationsRead = (ids: number[]) =>
+    fetcher<{ updated: number }>('/notifications/read', { method: 'POST', body: JSON.stringify({ ids }) });
+export const markAllNotificationsRead = () =>
+    fetcher<{ updated: number }>('/notifications/read-all', { method: 'POST' });
+
+// ── Profiles ──
+export const searchProfiles = (query: string, limit = 25) =>
+    fetcher<ProfileSearchResult[]>(`/profiles/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+export const getMyProfile = () => fetcher<Profile>('/profiles/me');
+export const getProfile = (username: string) => fetcher<Profile>(`/profiles/${encodeURIComponent(username)}`);
+export const updateMyProfile = (data: Partial<Pick<Profile, 'displayName' | 'homeCountry' | 'homeCurrency' | 'profileTheme' | 'aboutMe' | 'showWorldMap' | 'showFeaturedTrips' | 'showFavoritePhotos' | 'showFeaturedFriends'>>) =>
+    fetcher<Profile>('/profiles/me', { method: 'PATCH', body: JSON.stringify(data) });
+export const getProfileOptions = () => fetcher<{ trips: ProfileTrip[]; photos: ProfilePhoto[]; friends: ProfileFriend[]; themes: string[] }>('/profiles/me/options');
+export const setFeaturedTrips = (tripIds: number[]) =>
+    fetcher<ProfileTrip[]>('/profiles/me/featured-trips', { method: 'PUT', body: JSON.stringify({ tripIds }) });
+export const setFavoritePhotos = (photoIds: number[]) =>
+    fetcher<ProfilePhoto[]>('/profiles/me/favorite-photos', { method: 'PUT', body: JSON.stringify({ photoIds }) });
+export const setFeaturedFriends = (userIds: number[]) =>
+    fetcher<ProfileFriend[]>('/profiles/me/featured-friends', { method: 'PUT', body: JSON.stringify({ userIds }) });
 
 // ── Finance ──
 export const getCurrencies = () => fetcher<CurrencyOption[]>('/currencies');

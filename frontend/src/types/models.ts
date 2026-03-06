@@ -18,6 +18,7 @@ export interface User {
     personId: number;
     homeCountry: string;
     homeCurrency: string;
+    profileTheme: 'dark-matter' | 'positron' | 'voyager' | 'oceanic' | 'atlas-sand' | 'pine-trail';
     createdAt: string;
 }
 
@@ -36,8 +37,92 @@ export interface FriendRequest {
     toUserId: number;
     fromUsername: string;
     fromDisplayName: string;
+    toUsername: string;
+    toDisplayName: string;
     status: string;
     createdAt: string;
+}
+
+export interface UserSearchResult {
+    id: number;
+    username: string;
+    displayName: string;
+    homeCountry: string;
+    homeCurrency: string;
+    isFriend: boolean;
+    hasIncoming: boolean;
+    hasOutgoing: boolean;
+}
+
+export interface NotificationItem {
+    id: number;
+    type: string;
+    title: string;
+    message: string;
+    payload: Record<string, unknown>;
+    isRead: boolean;
+    createdAt: string;
+}
+
+export interface ProfileTrip {
+    id: number;
+    name: string;
+    color: string;
+    placesCount: number;
+    photosCount: number;
+}
+
+export interface ProfilePhoto {
+    id: number;
+    name: string;
+    url: string;
+    thumbUrl: string;
+}
+
+export interface ProfileMapPlace {
+    placeId: number;
+    tripId: number;
+    tripName: string;
+    tripColor: string;
+    lat: number;
+    lng: number;
+    sortOrder: number;
+}
+
+export interface ProfileFriend {
+    userId: number;
+    username: string;
+    displayName: string;
+    homeCountry: string;
+    homeCurrency: string;
+}
+
+export interface Profile {
+    userId: number;
+    username: string;
+    displayName: string;
+    homeCountry: string;
+    homeCurrency: string;
+    profileTheme: 'dark-matter' | 'positron' | 'voyager' | 'oceanic' | 'atlas-sand' | 'pine-trail';
+    aboutMe: string;
+    showWorldMap: boolean;
+    showFeaturedTrips: boolean;
+    showFavoritePhotos: boolean;
+    showFeaturedFriends: boolean;
+    featuredTrips: ProfileTrip[];
+    featuredFriends: ProfileFriend[];
+    favoritePhotos: ProfilePhoto[];
+    mapPlaces: ProfileMapPlace[];
+    isSelf: boolean;
+}
+
+export interface ProfileSearchResult {
+    userId: number;
+    username: string;
+    displayName: string;
+    profileTheme: 'dark-matter' | 'positron' | 'voyager' | 'oceanic' | 'atlas-sand' | 'pine-trail';
+    aboutMe: string;
+    isFriend: boolean;
 }
 
 export interface Place {

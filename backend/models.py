@@ -52,6 +52,7 @@ class UserOut(BaseModel):
     person_id: int = Field(alias="personId")
     home_country: str = Field("", alias="homeCountry")
     home_currency: str = Field("USD", alias="homeCurrency")
+    profile_theme: str = Field("dark-matter", alias="profileTheme")
     created_at: str = Field(alias="createdAt")
 
     model_config = {"populate_by_name": True}
@@ -61,12 +62,135 @@ class UserUpdate(BaseModel):
     display_name: str | None = Field(None, alias="displayName")
     home_country: str | None = Field(None, alias="homeCountry")
     home_currency: str | None = Field(None, alias="homeCurrency")
+    profile_theme: str | None = Field(None, alias="profileTheme")
 
     model_config = {"populate_by_name": True}
 
 
 class FriendRequestCreate(BaseModel):
     username: str
+
+
+class NotificationOut(BaseModel):
+    id: int
+    type: str
+    title: str
+    message: str
+    payload: dict = Field(default_factory=dict)
+    is_read: bool = Field(alias="isRead")
+    created_at: str = Field(alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class NotificationReadUpdate(BaseModel):
+    ids: list[int] = Field(default_factory=list)
+
+
+# ── Profiles ──────────────────────────────────────────────────────────────────
+class ProfileTripOut(BaseModel):
+    id: int
+    name: str
+    color: str
+    places_count: int = Field(alias="placesCount")
+    photos_count: int = Field(alias="photosCount")
+
+    model_config = {"populate_by_name": True}
+
+
+class ProfilePhotoOut(BaseModel):
+    id: int
+    name: str
+    url: str
+    thumb_url: str = Field(alias="thumbUrl")
+
+    model_config = {"populate_by_name": True}
+
+
+class ProfileMapPointOut(BaseModel):
+    place_id: int = Field(alias="placeId")
+    trip_id: int = Field(alias="tripId")
+    trip_name: str = Field(alias="tripName")
+    trip_color: str = Field(alias="tripColor")
+    lat: float
+    lng: float
+    sort_order: int = Field(alias="sortOrder")
+
+    model_config = {"populate_by_name": True}
+
+
+class ProfileFriendOut(BaseModel):
+    user_id: int = Field(alias="userId")
+    username: str
+    display_name: str = Field(alias="displayName")
+    home_country: str = Field("", alias="homeCountry")
+    home_currency: str = Field("USD", alias="homeCurrency")
+
+    model_config = {"populate_by_name": True}
+
+
+class ProfileOut(BaseModel):
+    user_id: int = Field(alias="userId")
+    username: str
+    display_name: str = Field(alias="displayName")
+    home_country: str = Field("", alias="homeCountry")
+    home_currency: str = Field("USD", alias="homeCurrency")
+    profile_theme: str = Field("dark-matter", alias="profileTheme")
+    about_me: str = Field("", alias="aboutMe")
+    show_world_map: bool = Field(True, alias="showWorldMap")
+    show_featured_trips: bool = Field(True, alias="showFeaturedTrips")
+    show_favorite_photos: bool = Field(True, alias="showFavoritePhotos")
+    show_featured_friends: bool = Field(True, alias="showFeaturedFriends")
+    featured_trips: list[ProfileTripOut] = Field(default_factory=list, alias="featuredTrips")
+    featured_friends: list[ProfileFriendOut] = Field(default_factory=list, alias="featuredFriends")
+    favorite_photos: list[ProfilePhotoOut] = Field(default_factory=list, alias="favoritePhotos")
+    map_places: list[ProfileMapPointOut] = Field(default_factory=list, alias="mapPlaces")
+    is_self: bool = Field(False, alias="isSelf")
+
+    model_config = {"populate_by_name": True}
+
+
+class ProfileUpdate(BaseModel):
+    display_name: str | None = Field(None, alias="displayName")
+    home_country: str | None = Field(None, alias="homeCountry")
+    home_currency: str | None = Field(None, alias="homeCurrency")
+    profile_theme: str | None = Field(None, alias="profileTheme")
+    about_me: str | None = Field(None, alias="aboutMe")
+    show_world_map: bool | None = Field(None, alias="showWorldMap")
+    show_featured_trips: bool | None = Field(None, alias="showFeaturedTrips")
+    show_favorite_photos: bool | None = Field(None, alias="showFavoritePhotos")
+    show_featured_friends: bool | None = Field(None, alias="showFeaturedFriends")
+
+    model_config = {"populate_by_name": True}
+
+
+class ProfileSearchResult(BaseModel):
+    user_id: int = Field(alias="userId")
+    username: str
+    display_name: str = Field(alias="displayName")
+    profile_theme: str = Field(alias="profileTheme")
+    about_me: str = Field("", alias="aboutMe")
+    is_friend: bool = Field(False, alias="isFriend")
+
+    model_config = {"populate_by_name": True}
+
+
+class FeaturedTripsUpdate(BaseModel):
+    trip_ids: list[int] = Field(default_factory=list, alias="tripIds")
+
+    model_config = {"populate_by_name": True}
+
+
+class FavoritePhotosUpdate(BaseModel):
+    photo_ids: list[int] = Field(default_factory=list, alias="photoIds")
+
+    model_config = {"populate_by_name": True}
+
+
+class FeaturedFriendsUpdate(BaseModel):
+    user_ids: list[int] = Field(default_factory=list, alias="userIds")
+
+    model_config = {"populate_by_name": True}
 
 
 class FriendOut(BaseModel):
@@ -86,6 +210,8 @@ class FriendRequestOut(BaseModel):
     to_user_id: int = Field(alias="toUserId")
     from_username: str = Field("", alias="fromUsername")
     from_display_name: str = Field("", alias="fromDisplayName")
+    to_username: str = Field("", alias="toUsername")
+    to_display_name: str = Field("", alias="toDisplayName")
     status: str
     created_at: str = Field(alias="createdAt")
 
