@@ -2165,6 +2165,120 @@ class Store:
             for r in rows
         ]
 
+    async def get_trip_settlement(self, trip_id: int, user_id: int) -> dict:
+        if not await self.user_can_access_trip(user_id, trip_id):
+            return {"participants": [], "transfers": [], "total": 0.0, "perPerson": 0.0, "homeCurrency": "USD", "mixedCurrencies": False}
+
+        async with self.db.execute("SELECT user_id FROM trips WHERE id = ?", (trip_id,)) as cursor:
+            trip_row = await cursor.fetchone()
+        if not trip_row:
+            return {"participants": [], "transfers": [], "total": 0.0, "perPerson": 0.0, "homeCurrency": "USD", "mixedCurrencies": False}
+
+        owner_id = int(trip_row["user_id"])
+        member_rows = await self.db.execute_fetchall("SELECT user_id FROM trip_members WHERE trip_id = ?", (trip_id,))
+        participant_ids = sorted({owner_id, *[int(r["user_id"]) for r in member_rows]})
+        if not participant_ids:
+            return {"participants": [], "transfers": [], "total": 0.0, "perPerson": 0.0, "homeCurrency": "USD", "mixedCurrencies": False}
+
+        placeholders = ",".join(["?"] * len(participant_ids))
+        user_rows = await self.db.execute_fetchall(
+            f"SELECT id, username, display_name FROM users WHERE id IN ({placeholders})",
+            tuple(participant_ids),
+        )
+        users_by_id = {
+            int(r["id"]): {
+                "userId": int(r["id"]),
+                "username": r["username"],
+                "displayName": r["display_name"],
+            }
+            for r in user_rows
+        }
+
+        expense_rows = await self.db.execute_fetchall(
+            "SELECT user_id, amount_home, home_currency FROM expenses WHERE trip_id = ?",
+            (trip_id,),
+        )
+        if not expense_rows:
+            participants = [
+                {
+                    **users_by_id.get(uid, {"userId": uid, "username": f"user-{uid}", "displayName": f"User {uid}"}),
+                    "paid": 0.0,
+                    "share": 0.0,
+                    "balance": 0.0,
+                }
+                for uid in participant_ids
+            ]
+            return {
+                "participants": participants,
+                "transfers": [],
+                "total": 0.0,
+                "perPerson": 0.0,
+                "homeCurrency": "USD",
+                "mixedCurrencies": False,
+            }
+
+        paid_map = {uid: 0.0 for uid in participant_ids}
+        currencies = {str(r["home_currency"] or "USD") for r in expense_rows}
+        for row in expense_rows:
+            payer_id = int(row["user_id"])
+            if payer_id in paid_map:
+                paid_map[payer_id] += float(row["amount_home"])
+
+        total = sum(paid_map.values())
+        per_person = (total / len(participant_ids)) if participant_ids else 0.0
+
+        participants = []
+        balances: list[dict] = []
+        for uid in participant_ids:
+            paid = round(paid_map.get(uid, 0.0), 2)
+            share = round(per_person, 2)
+            balance = round(paid - share, 2)
+            participants.append(
+                {
+                    **users_by_id.get(uid, {"userId": uid, "username": f"user-{uid}", "displayName": f"User {uid}"}),
+                    "paid": paid,
+                    "share": share,
+                    "balance": balance,
+                }
+            )
+            balances.append({"userId": uid, "amount": balance})
+
+        creditors = [b.copy() for b in balances if b["amount"] > 0.009]
+        debtors = [b.copy() for b in balances if b["amount"] < -0.009]
+        transfers: list[dict] = []
+
+        i = 0
+        j = 0
+        while i < len(debtors) and j < len(creditors):
+            debtor = debtors[i]
+            creditor = creditors[j]
+            amount = min(-debtor["amount"], creditor["amount"])
+            amount = round(amount, 2)
+            if amount > 0:
+                transfers.append(
+                    {
+                        "fromUserId": debtor["userId"],
+                        "toUserId": creditor["userId"],
+                        "amount": amount,
+                    }
+                )
+                debtor["amount"] = round(debtor["amount"] + amount, 2)
+                creditor["amount"] = round(creditor["amount"] - amount, 2)
+            if debtor["amount"] >= -0.009:
+                i += 1
+            if creditor["amount"] <= 0.009:
+                j += 1
+
+        home_currency = sorted(currencies)[0] if currencies else "USD"
+        return {
+            "participants": participants,
+            "transfers": transfers,
+            "total": round(total, 2),
+            "perPerson": round(per_person, 2),
+            "homeCurrency": home_currency,
+            "mixedCurrencies": len(currencies) > 1,
+        }
+
     # ── Share Links ──────────────────────────────────────────────────────
 
     async def create_share_link(self, link_type: str, photo_id: int | None, trip_id: int | None) -> ShareLinkOut:

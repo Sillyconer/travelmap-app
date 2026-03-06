@@ -73,3 +73,11 @@ async def list_expenses(trip_id: int, current_user: UserOut = Depends(get_curren
     if not await store.user_can_access_trip(current_user.id, trip_id):
         raise HTTPException(status_code=404, detail="Trip not found")
     return await store.list_expenses(trip_id, current_user.id)
+
+
+@router.get("/trips/{trip_id}/expenses/settlement", response_model=dict)
+async def get_trip_settlement(trip_id: int, current_user: UserOut = Depends(get_current_user)):
+    store = get_store()
+    if not await store.user_can_access_trip(current_user.id, trip_id):
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return await store.get_trip_settlement(trip_id, current_user.id)

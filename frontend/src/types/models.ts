@@ -258,6 +258,30 @@ export interface Expense {
     createdAt: string;
 }
 
+export interface ExpenseSettlementParticipant {
+    userId: number;
+    username: string;
+    displayName: string;
+    paid: number;
+    share: number;
+    balance: number;
+}
+
+export interface ExpenseSettlementTransfer {
+    fromUserId: number;
+    toUserId: number;
+    amount: number;
+}
+
+export interface ExpenseSettlement {
+    participants: ExpenseSettlementParticipant[];
+    transfers: ExpenseSettlementTransfer[];
+    total: number;
+    perPerson: number;
+    homeCurrency: string;
+    mixedCurrencies: boolean;
+}
+
 export type PlaceCreate = Pick<Place, 'name' | 'lat' | 'lng' | 'note'>;
 export type PlaceUpdate = Partial<Omit<Place, 'id'>>;
 

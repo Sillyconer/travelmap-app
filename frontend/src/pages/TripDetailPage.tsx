@@ -16,7 +16,7 @@ import { PhotoGrid } from '../components/gallery/PhotoGrid';
 import { Lightbox } from '../components/gallery/Lightbox';
 import { MdDownload } from 'react-icons/md';
 import { Share2 } from 'lucide-react';
-import type { CommentItem, CurrencyOption, Expense } from '../types/models';
+import type { CommentItem, CurrencyOption, Expense, ExpenseSettlement } from '../types/models';
 import type { Friend, TripMember } from '../types/models';
 import { motion } from 'framer-motion';
 import {
@@ -61,6 +61,7 @@ export const TripDetailPage = () => {
 
     // Expenses State
     const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [settlement, setSettlement] = useState<ExpenseSettlement | null>(null);
     const [expenseAmount, setExpenseAmount] = useState('');
     const [expenseCurrency, setExpenseCurrency] = useState('USD');
     const [expenseNote, setExpenseNote] = useState('');
@@ -101,6 +102,9 @@ export const TripDetailPage = () => {
                 ]);
                 setExpenses(loadedExpenses);
                 setCurrencies(loadedCurrencies);
+
+                const loadedSettlement = await api.getExpenseSettlement(tripId).catch(() => null);
+                setSettlement(loadedSettlement);
 
                 const loadedComments = await api.getComments('trip', tripId).catch(() => []);
                 setComments(loadedComments);
@@ -287,6 +291,8 @@ export const TripDetailPage = () => {
                 note: expenseNote,
             });
             setExpenses(prev => [created, ...prev]);
+            const refreshedSettlement = await api.getExpenseSettlement(trip.id).catch(() => null);
+            setSettlement(refreshedSettlement);
             setExpenseAmount('');
             setExpenseNote('');
             showSnackbar('Expense logged');
@@ -548,6 +554,30 @@ export const TripDetailPage = () => {
                             ))}
                             {expenses.length === 0 && <p className={styles.helperText}>No expenses logged yet.</p>}
                         </div>
+                        {settlement && (
+                            <div className={styles.settlementBlock}>
+                                <p className={styles.helperText}>
+                                    Per person: {settlement.perPerson} {settlement.homeCurrency}
+                                    {settlement.mixedCurrencies ? ' (mixed source currencies)' : ''}
+                                </p>
+                                {settlement.transfers.length === 0 ? (
+                                    <p className={styles.helperText}>No transfers needed right now.</p>
+                                ) : (
+                                    <div className={styles.settlementList}>
+                                        {settlement.transfers.map((transfer, idx) => {
+                                            const from = settlement.participants.find(p => p.userId === transfer.fromUserId);
+                                            const to = settlement.participants.find(p => p.userId === transfer.toUserId);
+                                            return (
+                                                <div key={`transfer-${idx}`} className={styles.metaRow}>
+                                                    <span className={styles.metaLabel}>{from?.displayName || transfer.fromUserId} pays {to?.displayName || transfer.toUserId}</span>
+                                                    <span className={styles.metaValue}>{transfer.amount} {settlement.homeCurrency}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </Card>
 
                     {/* Photo Grid Section */}

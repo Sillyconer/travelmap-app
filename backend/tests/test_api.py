@@ -308,3 +308,26 @@ async def test_trip_comments_and_reactions(authed_client: AsyncClient):
 
     deleted = await authed_client.delete(f"/api/comments/{comment_payload['id']}")
     assert deleted.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_trip_expense_settlement_summary(authed_client: AsyncClient):
+    trip = await authed_client.post(
+        "/api/trips",
+        json={"name": "Settlement Trip", "color": "#33AA99", "visibility": "friends_only"},
+    )
+    assert trip.status_code == 201
+    trip_id = trip.json()["id"]
+
+    exp_a = await authed_client.post(
+        f"/api/trips/{trip_id}/expenses",
+        json={"amount": 60, "currency": "USD", "note": "Hotel"},
+    )
+    assert exp_a.status_code == 201
+
+    settlement = await authed_client.get(f"/api/trips/{trip_id}/expenses/settlement")
+    assert settlement.status_code == 200
+    payload = settlement.json()
+    assert payload["total"] >= 60
+    assert payload["perPerson"] >= 60
+    assert len(payload["participants"]) >= 1
