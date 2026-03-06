@@ -273,3 +273,38 @@ async def test_login_rate_limit_blocks_excessive_attempts():
             latest_status = login.status_code
 
         assert latest_status == 429
+
+
+@pytest.mark.asyncio
+async def test_trip_comments_and_reactions(authed_client: AsyncClient):
+    created = await authed_client.post(
+        "/api/trips",
+        json={"name": "Commentable Trip", "color": "#FF8800", "visibility": "friends_only"},
+    )
+    assert created.status_code == 201
+    trip_id = created.json()["id"]
+
+    comment = await authed_client.post(
+        "/api/comments",
+        json={"entityType": "trip", "entityId": trip_id, "body": "Great route and photos."},
+    )
+    assert comment.status_code == 201
+    comment_payload = comment.json()
+    assert comment_payload["body"] == "Great route and photos."
+    assert comment_payload["reactions"] == []
+
+    listed = await authed_client.get(f"/api/comments?entity_type=trip&entity_id={trip_id}")
+    assert listed.status_code == 200
+    assert len(listed.json()) == 1
+
+    reacted = await authed_client.post(
+        f"/api/comments/{comment_payload['id']}/reactions",
+        json={"emoji": "👍"},
+    )
+    assert reacted.status_code == 200
+    assert reacted.json()[0]["emoji"] == "👍"
+    assert reacted.json()[0]["count"] == 1
+    assert reacted.json()[0]["reacted"] is True
+
+    deleted = await authed_client.delete(f"/api/comments/{comment_payload['id']}")
+    assert deleted.status_code == 200

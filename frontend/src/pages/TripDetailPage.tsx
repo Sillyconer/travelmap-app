@@ -16,7 +16,7 @@ import { PhotoGrid } from '../components/gallery/PhotoGrid';
 import { Lightbox } from '../components/gallery/Lightbox';
 import { MdDownload } from 'react-icons/md';
 import { Share2 } from 'lucide-react';
-import type { CurrencyOption, Expense } from '../types/models';
+import type { CommentItem, CurrencyOption, Expense } from '../types/models';
 import type { Friend, TripMember } from '../types/models';
 import { motion } from 'framer-motion';
 import {
@@ -69,6 +69,8 @@ export const TripDetailPage = () => {
     const [members, setMembers] = useState<TripMember[]>([]);
     const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
     const [selectedInviteRole, setSelectedInviteRole] = useState<'viewer' | 'editor'>('viewer');
+    const [comments, setComments] = useState<CommentItem[]>([]);
+    const [newCommentBody, setNewCommentBody] = useState('');
 
     // DnD Sensors
     const sensors = useSensors(
@@ -99,6 +101,9 @@ export const TripDetailPage = () => {
                 ]);
                 setExpenses(loadedExpenses);
                 setCurrencies(loadedCurrencies);
+
+                const loadedComments = await api.getComments('trip', tripId).catch(() => []);
+                setComments(loadedComments);
 
                 const [friendsData, membersData] = await Promise.all([
                     api.getFriends().catch(() => []),
@@ -287,6 +292,36 @@ export const TripDetailPage = () => {
             showSnackbar('Expense logged');
         } catch (err: any) {
             showSnackbar(`Failed to add expense: ${err.message}`);
+        }
+    };
+
+    const handleAddComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!trip || !newCommentBody.trim()) return;
+        try {
+            const created = await api.createComment('trip', trip.id, newCommentBody.trim());
+            setComments(prev => [...prev, created]);
+            setNewCommentBody('');
+        } catch (err: any) {
+            showSnackbar(`Failed to post comment: ${err.message}`);
+        }
+    };
+
+    const handleDeleteComment = async (commentId: number) => {
+        try {
+            await api.deleteComment(commentId);
+            setComments(prev => prev.filter(c => c.id !== commentId));
+        } catch (err: any) {
+            showSnackbar(`Failed to delete comment: ${err.message}`);
+        }
+    };
+
+    const handleToggleReaction = async (commentId: number, emoji: string) => {
+        try {
+            const nextReactions = await api.toggleCommentReaction(commentId, emoji);
+            setComments(prev => prev.map(c => (c.id === commentId ? { ...c, reactions: nextReactions } : c)));
+        } catch (err: any) {
+            showSnackbar(`Failed to react: ${err.message}`);
         }
     };
 
@@ -552,6 +587,45 @@ export const TripDetailPage = () => {
                             )}
                         </Card>
                     )}
+
+                    <Card className={styles.metaCard}>
+                        <h3>Trip Discussion</h3>
+                        <form onSubmit={handleAddComment} className={styles.commentForm}>
+                            <Input
+                                label="Add a comment"
+                                value={newCommentBody}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCommentBody(e.target.value)}
+                                placeholder="Share a tip or update"
+                                fullWidth
+                            />
+                            <Button size="sm" type="submit" disabled={!newCommentBody.trim()}>Post</Button>
+                        </form>
+                        <div className={styles.commentList}>
+                            {comments.length === 0 && <p className={styles.helperText}>No comments yet.</p>}
+                            {comments.map(comment => (
+                                <div key={comment.id} className={styles.commentItem}>
+                                    <div className={styles.commentHeader}>
+                                        <strong>{comment.displayName}</strong>
+                                        <small>@{comment.username}</small>
+                                    </div>
+                                    <p className={styles.commentBody}>{comment.body}</p>
+                                    <div className={styles.commentActions}>
+                                        <button type="button" className={styles.reactionBtn} onClick={() => handleToggleReaction(comment.id, '👍')}>
+                                            👍 {comment.reactions.find(r => r.emoji === '👍')?.count || 0}
+                                        </button>
+                                        <button type="button" className={styles.reactionBtn} onClick={() => handleToggleReaction(comment.id, '❤️')}>
+                                            ❤️ {comment.reactions.find(r => r.emoji === '❤️')?.count || 0}
+                                        </button>
+                                        {comment.canDelete && (
+                                            <Button size="sm" variant="text" onClick={() => handleDeleteComment(comment.id)}>
+                                                Delete
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
                 </section>
 
             </div>

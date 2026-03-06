@@ -1,4 +1,6 @@
 import type {
+    CommentItem,
+    CommentReaction,
     CurrencyOption,
     Expense,
     Friend,
@@ -181,6 +183,16 @@ export const markAllNotificationsRead = () =>
 // ── Unified Search ──
 export const unifiedSearch = (query: string, limit = 8) =>
     fetcher<UnifiedSearchResults>(`/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+
+// ── Comments ──
+export const getComments = (entityType: 'trip' | 'photo', entityId: number, limit = 100) =>
+    fetcher<CommentItem[]>(`/comments?entity_type=${encodeURIComponent(entityType)}&entity_id=${entityId}&limit=${limit}`);
+export const createComment = (entityType: 'trip' | 'photo', entityId: number, body: string) =>
+    fetcher<CommentItem>('/comments', { method: 'POST', body: JSON.stringify({ entityType, entityId, body }) });
+export const deleteComment = (commentId: number) =>
+    fetcher<{ ok: boolean }>(`/comments/${commentId}`, { method: 'DELETE' });
+export const toggleCommentReaction = (commentId: number, emoji: string) =>
+    fetcher<CommentReaction[]>(`/comments/${commentId}/reactions`, { method: 'POST', body: JSON.stringify({ emoji }) });
 
 // ── Profiles ──
 export const searchProfiles = (query: string, limit = 25) =>

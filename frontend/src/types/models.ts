@@ -108,6 +108,25 @@ export interface UnifiedSearchResults {
     profiles: SearchProfileResult[];
 }
 
+export interface CommentReaction {
+    emoji: string;
+    count: number;
+    reacted: boolean;
+}
+
+export interface CommentItem {
+    id: number;
+    entityType: 'trip' | 'photo';
+    entityId: number;
+    userId: number;
+    username: string;
+    displayName: string;
+    body: string;
+    canDelete: boolean;
+    createdAt: string;
+    reactions: CommentReaction[];
+}
+
 export interface ProfileTrip {
     id: number;
     name: string;

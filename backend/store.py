@@ -18,6 +18,7 @@ from models import (
     PhotoOut,
     Person, PersonCreate, PersonUpdate,
     UserOut, FriendOut, FriendRequestOut, ExpenseOut, UserUpdate,
+    CommentCreate, CommentOut, CommentReactionOut,
     NotificationOut,
     TripMemberOut,
     ProfileFriendOut, ProfileMapPointOut, ProfileOut, ProfilePhotoOut, ProfileSearchResult, ProfileTripOut, ProfileUpdate,
@@ -165,6 +166,29 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_created
 CREATE INDEX IF NOT EXISTS idx_notifications_user_unread
     ON notifications(user_id, is_read, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS comments (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type  TEXT    NOT NULL,
+    entity_id    INTEGER NOT NULL,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body         TEXT    NOT NULL,
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_comments_entity
+    ON comments(entity_type, entity_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS comment_reactions (
+    comment_id   INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    emoji        TEXT    NOT NULL,
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (comment_id, user_id, emoji)
+);
+
+CREATE INDEX IF NOT EXISTS idx_comment_reactions_comment
+    ON comment_reactions(comment_id, emoji);
+
 CREATE TABLE IF NOT EXISTS trip_members (
     trip_id      INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
     user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -293,6 +317,35 @@ class Store:
         )
         await self.db.execute(
             "CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read, created_at DESC)"
+        )
+        await self.db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS comments (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                entity_type  TEXT    NOT NULL,
+                entity_id    INTEGER NOT NULL,
+                user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                body         TEXT    NOT NULL,
+                created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        await self.db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_comments_entity ON comments(entity_type, entity_id, created_at DESC)"
+        )
+        await self.db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS comment_reactions (
+                comment_id   INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+                user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                emoji        TEXT    NOT NULL,
+                created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+                PRIMARY KEY (comment_id, user_id, emoji)
+            )
+            """
+        )
+        await self.db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_comment_reactions_comment ON comment_reactions(comment_id, emoji)"
         )
 
     async def _ensure_photos_trip_nullable(self) -> None:
@@ -1409,6 +1462,165 @@ class Store:
         )
         await self.db.commit()
         return int(cursor.rowcount or 0)
+
+    # ── Comments ──────────────────────────────────────────────────────────
+
+    async def _can_access_comment_entity(self, user_id: int, entity_type: str, entity_id: int) -> bool:
+        kind = entity_type.strip().lower()
+        if kind == "trip":
+            return await self.user_can_access_trip(user_id, entity_id)
+        if kind == "photo":
+            async with self.db.execute("SELECT trip_id, user_id FROM photos WHERE id = ?", (entity_id,)) as cursor:
+                row = await cursor.fetchone()
+            if not row:
+                return False
+            if row["trip_id"] is not None:
+                return await self.user_can_access_trip(user_id, int(row["trip_id"]))
+            return int(row["user_id"]) == user_id
+        return False
+
+    async def list_comments(self, user_id: int, entity_type: str, entity_id: int, limit: int = 100) -> list[CommentOut]:
+        if not await self._can_access_comment_entity(user_id, entity_type, entity_id):
+            return []
+
+        safe_limit = max(1, min(limit, 200))
+        rows = await self.db.execute_fetchall(
+            """
+            SELECT c.id, c.entity_type, c.entity_id, c.user_id, c.body, c.created_at,
+                   u.username, u.display_name
+            FROM comments c
+            JOIN users u ON u.id = c.user_id
+            WHERE c.entity_type = ? AND c.entity_id = ?
+            ORDER BY c.id ASC
+            LIMIT ?
+            """,
+            (entity_type.strip().lower(), entity_id, safe_limit),
+        )
+        comments: list[CommentOut] = []
+        for row in rows:
+            reaction_rows = await self.db.execute_fetchall(
+                """
+                SELECT emoji,
+                       COUNT(*) AS count,
+                       SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS reacted
+                FROM comment_reactions
+                WHERE comment_id = ?
+                GROUP BY emoji
+                ORDER BY count DESC, emoji ASC
+                """,
+                (user_id, row["id"]),
+            )
+            comments.append(
+                CommentOut(
+                    id=row["id"],
+                    entityType=row["entity_type"],
+                    entityId=row["entity_id"],
+                    userId=row["user_id"],
+                    username=row["username"],
+                    displayName=row["display_name"],
+                    body=row["body"],
+                    canDelete=row["user_id"] == user_id,
+                    createdAt=row["created_at"],
+                    reactions=[
+                        CommentReactionOut(
+                            emoji=reaction["emoji"],
+                            count=int(reaction["count"]),
+                            reacted=bool(reaction["reacted"]),
+                        )
+                        for reaction in reaction_rows
+                    ],
+                )
+            )
+        return comments
+
+    async def create_comment(self, user_id: int, data: CommentCreate) -> CommentOut:
+        entity_type = data.entity_type.strip().lower()
+        if entity_type not in {"trip", "photo"}:
+            raise ValueError("Unsupported comment entity")
+        body = data.body.strip()
+        if len(body) < 1:
+            raise ValueError("Comment body is required")
+        if len(body) > 1000:
+            raise ValueError("Comment is too long (max 1000)")
+        if not await self._can_access_comment_entity(user_id, entity_type, data.entity_id):
+            raise ValueError("You cannot comment on this item")
+
+        cursor = await self.db.execute(
+            "INSERT INTO comments (entity_type, entity_id, user_id, body) VALUES (?, ?, ?, ?)",
+            (entity_type, data.entity_id, user_id, body),
+        )
+        comment_id = int(cursor.lastrowid or 0)
+        await self.db.commit()
+
+        comments = await self.list_comments(user_id, entity_type, data.entity_id, limit=200)
+        for comment in comments:
+            if comment.id == comment_id:
+                return comment
+        raise ValueError("Failed to create comment")
+
+    async def delete_comment(self, user_id: int, comment_id: int) -> bool:
+        cursor = await self.db.execute(
+            "DELETE FROM comments WHERE id = ? AND user_id = ?",
+            (comment_id, user_id),
+        )
+        await self.db.commit()
+        return (cursor.rowcount or 0) > 0
+
+    async def toggle_comment_reaction(self, user_id: int, comment_id: int, emoji: str) -> list[CommentReactionOut]:
+        clean_emoji = emoji.strip()
+        if not clean_emoji:
+            raise ValueError("Emoji is required")
+        if len(clean_emoji) > 16:
+            raise ValueError("Emoji value is invalid")
+
+        async with self.db.execute(
+            "SELECT entity_type, entity_id FROM comments WHERE id = ?",
+            (comment_id,),
+        ) as cursor:
+            comment = await cursor.fetchone()
+        if not comment:
+            raise ValueError("Comment not found")
+        if not await self._can_access_comment_entity(user_id, comment["entity_type"], int(comment["entity_id"])):
+            raise ValueError("You cannot react to this comment")
+
+        async with self.db.execute(
+            "SELECT 1 FROM comment_reactions WHERE comment_id = ? AND user_id = ? AND emoji = ?",
+            (comment_id, user_id, clean_emoji),
+        ) as cursor:
+            existing = await cursor.fetchone()
+
+        if existing:
+            await self.db.execute(
+                "DELETE FROM comment_reactions WHERE comment_id = ? AND user_id = ? AND emoji = ?",
+                (comment_id, user_id, clean_emoji),
+            )
+        else:
+            await self.db.execute(
+                "INSERT INTO comment_reactions (comment_id, user_id, emoji) VALUES (?, ?, ?)",
+                (comment_id, user_id, clean_emoji),
+            )
+        await self.db.commit()
+
+        reaction_rows = await self.db.execute_fetchall(
+            """
+            SELECT emoji,
+                   COUNT(*) AS count,
+                   SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS reacted
+            FROM comment_reactions
+            WHERE comment_id = ?
+            GROUP BY emoji
+            ORDER BY count DESC, emoji ASC
+            """,
+            (user_id, comment_id),
+        )
+        return [
+            CommentReactionOut(
+                emoji=row["emoji"],
+                count=int(row["count"]),
+                reacted=bool(row["reacted"]),
+            )
+            for row in reaction_rows
+        ]
 
     # ── Friends ───────────────────────────────────────────────────────────
 

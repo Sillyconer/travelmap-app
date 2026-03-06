@@ -91,6 +91,39 @@ class NotificationReadUpdate(BaseModel):
     ids: list[int] = Field(default_factory=list)
 
 
+class CommentCreate(BaseModel):
+    entity_type: str = Field(alias="entityType")
+    entity_id: int = Field(alias="entityId")
+    body: str
+
+    model_config = {"populate_by_name": True}
+
+
+class CommentReactionToggle(BaseModel):
+    emoji: str
+
+
+class CommentReactionOut(BaseModel):
+    emoji: str
+    count: int
+    reacted: bool
+
+
+class CommentOut(BaseModel):
+    id: int
+    entity_type: str = Field(alias="entityType")
+    entity_id: int = Field(alias="entityId")
+    user_id: int = Field(alias="userId")
+    username: str
+    display_name: str = Field(alias="displayName")
+    body: str
+    can_delete: bool = Field(alias="canDelete")
+    created_at: str = Field(alias="createdAt")
+    reactions: list[CommentReactionOut] = Field(default_factory=list)
+
+    model_config = {"populate_by_name": True}
+
+
 # ── Profiles ──────────────────────────────────────────────────────────────────
 class ProfileTripOut(BaseModel):
     id: int
