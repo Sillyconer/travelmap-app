@@ -463,6 +463,12 @@ export const TripDetailPage = () => {
                 </div>
             </motion.header>
 
+            {!canEdit && (
+                <Card className={styles.readOnlyCard}>
+                    You have viewer access to this trip. You can explore content but cannot edit itinerary, photos, or expenses.
+                </Card>
+            )}
+
             <div className={styles.contentGrid}>
 
                 {/* Left Column: Places Timeline */}

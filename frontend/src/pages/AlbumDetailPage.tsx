@@ -88,13 +88,20 @@ export const AlbumDetailPage = () => {
 
     const handleDownloadAllPhotos = () => {
         if (!trip || trip.photos.length === 0) return;
-        const url = `http://localhost:8000/api/trips/${trip.id}/photos/download`;
-        const a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        api.downloadTripPhotosZip(trip.id)
+            .then((blob) => {
+                const objectUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = objectUrl;
+                a.download = `${trip.name.replace(/\s+/g, '_')}_photos.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(objectUrl);
+            })
+            .catch((err: any) => {
+                showSnackbar(`Download failed: ${err.message || 'Unknown error'}`);
+            });
     };
 
     if (isLoading && !trip) {
@@ -127,13 +134,18 @@ export const AlbumDetailPage = () => {
                     <span>•</span>
                     <span>{trip.places.length} locations</span>
                 </div>
+                {trip.accessRole === 'viewer' && (
+                    <p className={styles.readOnlyHint}>Viewer access: you can browse and download this album, but editing stays disabled.</p>
+                )}
             </header>
 
             <main className={styles.content}>
                 {trip.photos.length === 0 ? (
                     <div className={styles.emptyState}>
                         <p>No photos have been uploaded to this trip yet.</p>
-                        <Button onClick={() => navigate(`/trips/${trip.id}`)}>Go to Trip Details to Upload</Button>
+                        <Button onClick={() => navigate(`/trips/${trip.id}`)}>
+                            {trip.accessRole === 'viewer' ? 'Open Trip Details' : 'Go to Trip Details to Upload'}
+                        </Button>
                     </div>
                 ) : (
                     groupedPhotos.map(group => (
@@ -159,6 +171,7 @@ export const AlbumDetailPage = () => {
                     currentIndex={lightboxIndex}
                     onClose={() => setLightboxIndex(null)}
                     onNavigate={(newIndex) => setLightboxIndex(newIndex)}
+                    enableComments
                 />
             )}
         </div>

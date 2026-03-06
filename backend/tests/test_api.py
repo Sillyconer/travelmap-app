@@ -581,3 +581,46 @@ async def test_viewer_cannot_assign_photo_to_shared_trip():
             json={"tripId": trip_id},
         )
         assert assign_attempt.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_editor_cannot_update_trip_settings():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as owner_client, AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as editor_client:
+        owner_register = await owner_client.post(
+            "/api/auth/register",
+            json={"username": "settingsowner", "displayName": "Settings Owner", "password": "secret"},
+        )
+        editor_register = await editor_client.post(
+            "/api/auth/register",
+            json={"username": "settingseditor", "displayName": "Settings Editor", "password": "secret"},
+        )
+        assert owner_register.status_code == 201
+        assert editor_register.status_code == 201
+
+        owner_client.headers.update({"Authorization": f"Bearer {owner_register.json()['token']}"})
+        editor_client.headers.update({"Authorization": f"Bearer {editor_register.json()['token']}"})
+
+        request = await editor_client.post("/api/social/friend-requests", json={"username": "settingsowner"})
+        assert request.status_code == 201
+        accepted = await owner_client.post(f"/api/social/friend-requests/{request.json()['id']}/accept")
+        assert accepted.status_code == 200
+
+        trip = await owner_client.post(
+            "/api/trips",
+            json={"name": "Owner Controls", "color": "#221144", "visibility": "friends_only"},
+        )
+        assert trip.status_code == 201
+        trip_id = trip.json()["id"]
+
+        invited = await owner_client.post(
+            f"/api/trips/{trip_id}/members/{editor_register.json()['user']['id']}?role=editor"
+        )
+        assert invited.status_code == 200
+
+        update_attempt = await editor_client.post(
+            f"/api/trips/{trip_id}/update",
+            json={"name": "Edited By Member"},
+        )
+        assert update_attempt.status_code == 403
