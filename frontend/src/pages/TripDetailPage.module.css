@@ -262,10 +262,27 @@
     gap: 8px;
 }
 
+.photoSectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.photoSectionMeta {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px;
+}
+
 .tripPhotoGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     gap: 8px;
+}
+
+.tripPhotoCard {
+    display: grid;
+    gap: 6px;
 }
 
 .tripPhotoButton {
@@ -282,6 +299,19 @@
     aspect-ratio: 1 / 1;
     object-fit: cover;
     display: block;
+}
+
+.tripPhotoMeta {
+    display: grid;
+    gap: 2px;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px;
+}
+
+.tripPhotoName {
+    color: var(--md-sys-color-on-surface);
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .planDayTitle {

@@ -501,6 +501,17 @@ export const TripDetailPage = () => {
         return { sections, unassigned };
     }, [trip]);
 
+    const formatTakenAt = (takenAt?: number) => {
+        if (!takenAt) {
+            return 'Time unknown';
+        }
+        const date = new Date(takenAt);
+        if (Number.isNaN(date.getTime())) {
+            return 'Time unknown';
+        }
+        return date.toLocaleString();
+    };
+
     if (isLoading && !trip) {
         return <div className={styles.loading}>Loading trip data...</div>;
     }
@@ -665,20 +676,29 @@ export const TripDetailPage = () => {
                         <div className={styles.photoSections}>
                             {photosByPlace.sections.map(section => (
                                 <div key={`place-photos-${section.place.id}`} className={styles.photoSection}>
-                                    <p className={styles.planDayTitle}>{section.place.name}</p>
+                                    <div className={styles.photoSectionHeader}>
+                                        <p className={styles.planDayTitle}>{section.place.name}</p>
+                                        <span className={styles.photoSectionMeta}>{section.photos.length} photo{section.photos.length === 1 ? '' : 's'}</span>
+                                    </div>
+                                    {section.place.note && <p className={styles.helperText}>{section.place.note}</p>}
                                     {section.photos.length === 0 ? (
                                         <p className={styles.helperText}>No photos assigned to this stop.</p>
                                     ) : (
                                         <div className={styles.tripPhotoGrid}>
                                             {section.photos.map(photo => (
-                                                <button
-                                                    key={`trip-photo-${photo.id}`}
-                                                    type="button"
-                                                    className={styles.tripPhotoButton}
-                                                    onClick={() => setLightboxIndex(trip.photos.findIndex(p => p.id === photo.id))}
-                                                >
-                                                    <img src={`http://localhost:8000${photo.thumbUrl}`} alt={photo.name} className={styles.tripPhotoThumb} />
-                                                </button>
+                                                <div key={`trip-photo-${photo.id}`} className={styles.tripPhotoCard}>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.tripPhotoButton}
+                                                        onClick={() => setLightboxIndex(trip.photos.findIndex(p => p.id === photo.id))}
+                                                    >
+                                                        <img src={`http://localhost:8000${photo.thumbUrl}`} alt={photo.name} className={styles.tripPhotoThumb} />
+                                                    </button>
+                                                    <div className={styles.tripPhotoMeta}>
+                                                        <strong className={styles.tripPhotoName}>{photo.name}</strong>
+                                                        <span>{formatTakenAt(photo.takenAt)}</span>
+                                                    </div>
+                                                </div>
                                             ))}
                                         </div>
                                     )}
@@ -686,17 +706,25 @@ export const TripDetailPage = () => {
                             ))}
                             {photosByPlace.unassigned.length > 0 && (
                                 <div className={styles.photoSection}>
-                                    <p className={styles.planDayTitle}>Unassigned</p>
+                                    <div className={styles.photoSectionHeader}>
+                                        <p className={styles.planDayTitle}>Unassigned</p>
+                                        <span className={styles.photoSectionMeta}>{photosByPlace.unassigned.length} photo{photosByPlace.unassigned.length === 1 ? '' : 's'}</span>
+                                    </div>
                                     <div className={styles.tripPhotoGrid}>
                                         {photosByPlace.unassigned.map(photo => (
-                                            <button
-                                                key={`trip-photo-unassigned-${photo.id}`}
-                                                type="button"
-                                                className={styles.tripPhotoButton}
-                                                onClick={() => setLightboxIndex(trip.photos.findIndex(p => p.id === photo.id))}
-                                            >
-                                                <img src={`http://localhost:8000${photo.thumbUrl}`} alt={photo.name} className={styles.tripPhotoThumb} />
-                                            </button>
+                                            <div key={`trip-photo-unassigned-${photo.id}`} className={styles.tripPhotoCard}>
+                                                <button
+                                                    type="button"
+                                                    className={styles.tripPhotoButton}
+                                                    onClick={() => setLightboxIndex(trip.photos.findIndex(p => p.id === photo.id))}
+                                                >
+                                                    <img src={`http://localhost:8000${photo.thumbUrl}`} alt={photo.name} className={styles.tripPhotoThumb} />
+                                                </button>
+                                                <div className={styles.tripPhotoMeta}>
+                                                    <strong className={styles.tripPhotoName}>{photo.name}</strong>
+                                                    <span>{formatTakenAt(photo.takenAt)}</span>
+                                                </div>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
