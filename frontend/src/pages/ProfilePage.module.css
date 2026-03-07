@@ -96,36 +96,6 @@
     gap: 8px;
 }
 
-.searchPanel {
-    display: grid;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.searchList {
-    display: grid;
-    gap: 6px;
-    max-height: 220px;
-    overflow: auto;
-}
-
-.searchResultBtn {
-    border: 1px solid var(--md-sys-color-outline-variant);
-    background: var(--md-sys-color-surface-container-high);
-    color: var(--md-sys-color-on-surface);
-    border-radius: 8px;
-    padding: 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-align: left;
-    cursor: pointer;
-}
-
-.searchResultBtn:hover {
-    border-color: var(--md-sys-color-primary);
-}
-
 .heroHead {
     display: flex;
     align-items: center;

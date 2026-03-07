@@ -7,11 +7,10 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Avatar } from '../components/ui/Avatar';
 import { CountryFlag } from '../components/ui/CountryFlag';
-import { Search } from 'lucide-react';
 import { showSnackbar } from '../components/ui/Snackbar';
 import { useAuthStore } from '../store/useAuthStore';
 import * as api from '../api/client';
-import type { Profile, ProfileFriend, ProfilePhoto, ProfileSearchResult, ProfileTrip } from '../types/models';
+import type { Profile, ProfileFriend, ProfilePhoto, ProfileTrip } from '../types/models';
 import styles from './ProfilePage.module.css';
 
 const THEMES = ['dark-matter', 'positron', 'voyager', 'oceanic', 'atlas-sand', 'pine-trail'] as const;
@@ -60,10 +59,6 @@ export const ProfilePage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<ProfileSearchResult[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
 
     const [allTrips, setAllTrips] = useState<ProfileTrip[]>([]);
     const [allPhotos, setAllPhotos] = useState<ProfilePhoto[]>([]);
@@ -83,24 +78,6 @@ export const ProfilePage = () => {
     const [featuredFriendIds, setFeaturedFriendIds] = useState<number[]>([]);
 
     const isSelf = !!profile?.isSelf;
-
-    useEffect(() => {
-        const q = searchQuery.trim();
-        if (!isSearchOpen || q.length < 2) {
-            setSearchResults([]);
-            return;
-        }
-        const timer = window.setTimeout(async () => {
-            setIsSearching(true);
-            try {
-                const rows = await api.searchProfiles(q, 24);
-                setSearchResults(rows);
-            } finally {
-                setIsSearching(false);
-            }
-        }, 220);
-        return () => window.clearTimeout(timer);
-    }, [isSearchOpen, searchQuery]);
 
     useEffect(() => {
         const load = async () => {
@@ -281,9 +258,6 @@ export const ProfilePage = () => {
                     <div className={styles.heroToolbar}>
                         <h1 className={styles.name}>Profile</h1>
                         <div className={styles.toolbarActions}>
-                            <Button variant="outlined" onClick={() => setIsSearchOpen(v => !v)}>
-                                <Search size={16} style={{ marginRight: 6 }} /> Search
-                            </Button>
                             {isSelf && (
                                 <Button onClick={isEditing ? handleSaveProfile : () => setIsEditing(true)} disabled={isSaving}>
                                     {isEditing ? (isSaving ? 'Saving...' : 'Save') : 'Edit'}
@@ -291,38 +265,6 @@ export const ProfilePage = () => {
                             )}
                         </div>
                     </div>
-
-                    {isSearchOpen && (
-                        <div className={styles.searchPanel}>
-                            <Input
-                                label="Search profiles"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="Type a username or display name"
-                                fullWidth
-                            />
-                            <div className={styles.searchList}>
-                                {isSearching && <p className={styles.muted}>Searching...</p>}
-                                {!isSearching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-                                    <p className={styles.muted}>No profiles found.</p>
-                                )}
-                                {searchResults.map(result => (
-                                    <button
-                                        key={result.userId}
-                                        type="button"
-                                        className={styles.searchResultBtn}
-                                        onClick={() => {
-                                            navigate(`/profiles/${result.username}`);
-                                            setIsSearchOpen(false);
-                                        }}
-                                    >
-                                        <Avatar seed={result.username} name={result.displayName} imageUrl={result.avatarUrl} size={30} />
-                                        <span>{result.displayName} (@{result.username})</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     <div className={styles.heroHead}>
                         <Avatar

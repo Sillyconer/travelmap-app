@@ -252,6 +252,38 @@
     gap: 6px;
 }
 
+.photoSections {
+    display: grid;
+    gap: 12px;
+}
+
+.photoSection {
+    display: grid;
+    gap: 8px;
+}
+
+.tripPhotoGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+}
+
+.tripPhotoButton {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 10px;
+    overflow: hidden;
+    padding: 0;
+    background: var(--md-sys-color-surface-container-low);
+    cursor: pointer;
+}
+
+.tripPhotoThumb {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+}
+
 .planDayTitle {
     margin: 0;
     font-weight: 700;

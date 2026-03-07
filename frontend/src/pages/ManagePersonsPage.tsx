@@ -36,8 +36,8 @@ export const ManagePersonsPage = () => {
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
 
     const owner = persons.find(p => p.isOwner);
-    const companions = persons.filter(p => !p.isOwner);
-    const sortedPersons = owner ? [owner, ...companions] : persons;
+    const friendPersons = persons.filter(p => !p.isOwner && p.isFriend);
+    const guestPersons = persons.filter(p => !p.isOwner && !p.isFriend);
 
     const loadSocial = async () => {
         try {
@@ -182,15 +182,16 @@ export const ManagePersonsPage = () => {
                     <h1 className={styles.title}>People</h1>
                     <p className={styles.subtitle}>Define the travellers who go on these trips.</p>
                 </div>
-                <Button onClick={() => setIsCreateOpen(true)}>+ Add Person</Button>
             </header>
 
             <section className={styles.socialSection}>
                 <Card className={styles.socialCard}>
                     <h3>Friends</h3>
-                    <div className={styles.friendRow}>
-                        <Input label="Add by username" value={friendUsername} onChange={e => setFriendUsername(e.target.value)} fullWidth />
-                        <Button onClick={handleSendFriendRequest}>Send Request</Button>
+                    <div className={styles.searchWidget}>
+                        <div className={styles.friendRow}>
+                            <Input label="Add by username" value={friendUsername} onChange={e => setFriendUsername(e.target.value)} fullWidth />
+                            <Button onClick={handleSendFriendRequest}>Send Request</Button>
+                        </div>
                     </div>
                     {searchResults.length > 0 && (
                         <div className={styles.searchResults}>
@@ -270,32 +271,95 @@ export const ManagePersonsPage = () => {
             {isLoading && persons.length === 0 ? (
                 <div className={styles.loading}>Loading people...</div>
             ) : (
-                <div className={styles.grid}>
-                    {sortedPersons.map(person => (
-                        <Card key={person.id} className={`${styles.personCard} ${person.isOwner ? styles.ownerCard : ''}`}>
-                            <div className={styles.avatar} style={{ backgroundColor: person.color }}>
-                                {person.name.charAt(0).toUpperCase()}
+                <div className={styles.listWrap}>
+                    {owner && (
+                        <Card className={`${styles.personRow} ${styles.ownerCard}`}>
+                            <div className={styles.avatar} style={{ backgroundColor: owner.color }}>
+                                {owner.name.charAt(0).toUpperCase()}
                             </div>
                             <div className={styles.cardContent}>
-                                <h3 className={styles.personName}>{person.name}</h3>
-                                {person.isOwner && <p className={styles.ownerBadge}>Your profile</p>}
-                            </div>
-                            <div className={styles.actions}>
-                                <Button variant="text" size="sm" onClick={() => openEditModal(person)}>
-                                    Edit
-                                </Button>
-                                <Button
-                                    variant="text"
-                                    size="sm"
-                                    disabled={person.isOwner}
-                                    onClick={() => setPersonToDelete(person.id)}
-                                    style={{ color: 'var(--md-sys-color-error)' }}
-                                >
-                                    Delete
-                                </Button>
+                                <h3 className={styles.personName}>{owner.name}</h3>
+                                <p className={styles.ownerBadge}>Your profile</p>
                             </div>
                         </Card>
-                    ))}
+                    )}
+
+                    <Card className={styles.sectionCard}>
+                        <div className={styles.sectionHeader}>
+                            <h3>Registered friends</h3>
+                            <p className={styles.helperText}>Friends with accounts appear here and stay linked to their profiles.</p>
+                        </div>
+                        <div className={styles.listSection}>
+                            {friendPersons.map(person => {
+                                const linkedFriend = friends.find(friend => friend.personId === person.id);
+                                return (
+                                    <div key={person.id} className={styles.personRow}>
+                                        <div className={styles.userInline}>
+                                            {linkedFriend ? (
+                                                <Avatar seed={linkedFriend.username} name={linkedFriend.displayName} imageUrl={linkedFriend.avatarUrl} size={40} />
+                                            ) : (
+                                                <div className={styles.avatar} style={{ backgroundColor: person.color }}>
+                                                    {person.name.charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
+                                            <div className={styles.cardContent}>
+                                                <h3 className={styles.personName}>{person.name}</h3>
+                                                <p className={styles.helperText}>Registered friend</p>
+                                            </div>
+                                        </div>
+                                        <div className={styles.actions}>
+                                            {linkedFriend && (
+                                                <Button variant="text" size="sm" onClick={() => navigate(`/profiles/${linkedFriend.username}`)}>
+                                                    View Profile
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {friendPersons.length === 0 && <p className={styles.helperText}>No registered friends yet.</p>}
+                        </div>
+                    </Card>
+
+                    <Card className={styles.sectionCard}>
+                        <div className={styles.sectionHeaderRow}>
+                            <div>
+                                <h3>Not registered</h3>
+                                <p className={styles.helperText}>Guests without accounts live here until they register.</p>
+                            </div>
+                            <Button onClick={() => setIsCreateOpen(true)}>+ Add Person</Button>
+                        </div>
+                        <div className={styles.listSection}>
+                            {guestPersons.map(person => (
+                                <div key={person.id} className={styles.personRow}>
+                                    <div className={styles.userInline}>
+                                        <div className={styles.avatar} style={{ backgroundColor: person.color }}>
+                                            {person.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className={styles.cardContent}>
+                                            <h3 className={styles.personName}>{person.name}</h3>
+                                            <p className={styles.helperText}>Guest traveller</p>
+                                        </div>
+                                    </div>
+                                    <div className={styles.actions}>
+                                        <Button variant="text" size="sm" onClick={() => openEditModal(person)}>
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            variant="text"
+                                            size="sm"
+                                            onClick={() => setPersonToDelete(person.id)}
+                                            style={{ color: 'var(--md-sys-color-error)' }}
+                                        >
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                            {guestPersons.length === 0 && <p className={styles.helperText}>No guest travellers yet.</p>}
+                        </div>
+                    </Card>
+
                     {persons.length === 0 && !isLoading && (
                         <div className={styles.emptyState}>
                             <p>No people defined yet. Add yourself or your travel partners!</p>

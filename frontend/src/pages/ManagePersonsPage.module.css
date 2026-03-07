@@ -10,7 +10,7 @@
 
 .header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: flex-start;
     margin-bottom: var(--md-sys-spacing-32);
 }
@@ -33,19 +33,10 @@
     color: var(--md-sys-color-on-surface-variant);
 }
 
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: var(--md-sys-spacing-24);
-}
-
-.personCard {
-    display: flex !important;
-    /* Override card base styles for horizontal layout */
-    flex-direction: row !important;
-    align-items: center;
-    gap: var(--md-sys-spacing-16);
-    padding: var(--md-sys-spacing-16);
+.listWrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-20);
 }
 
 .socialSection {
@@ -56,6 +47,14 @@
     display: flex;
     flex-direction: column;
     gap: var(--md-sys-spacing-12);
+    padding: 18px;
+}
+
+.searchWidget {
+    padding: 8px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 14px;
+    background: var(--md-sys-color-surface-container-low);
 }
 
 .friendRow {
@@ -90,6 +89,7 @@
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--md-sys-shape-corner-small);
     overflow: hidden;
+    margin-top: 4px;
 }
 
 .searchItem {
@@ -140,6 +140,41 @@
     background-color: color-mix(in srgb, var(--md-sys-color-primary-container) 35%, var(--md-sys-color-surface-container));
 }
 
+.sectionCard {
+    padding: 18px;
+}
+
+.sectionHeader,
+.sectionHeaderRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.sectionHeader h3,
+.sectionHeaderRow h3 {
+    margin: 0 0 4px;
+}
+
+.listSection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.personRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--md-sys-spacing-16);
+    padding: 12px 14px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-medium);
+    background: var(--md-sys-color-surface-container-low);
+}
+
 .avatar {
     width: 48px;
     height: 48px;
@@ -185,7 +220,6 @@
 }
 
 .emptyState {
-    grid-column: 1 / -1;
     text-align: center;
     padding: var(--md-sys-spacing-64) 0;
     color: var(--md-sys-color-on-surface-variant);
@@ -260,5 +294,12 @@
     .header {
         flex-direction: column;
         gap: var(--md-sys-spacing-16);
+    }
+
+    .friendRow,
+    .sectionHeaderRow,
+    .personRow {
+        flex-direction: column;
+        align-items: stretch;
     }
 }

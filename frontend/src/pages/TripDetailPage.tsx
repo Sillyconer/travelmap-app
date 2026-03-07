@@ -17,7 +17,7 @@ import { PhotoGrid } from '../components/gallery/PhotoGrid';
 import { Lightbox } from '../components/gallery/Lightbox';
 import { MdDownload } from 'react-icons/md';
 import { Share2 } from 'lucide-react';
-import type { CommentItem, CurrencyOption, Expense, ExpenseSettlement } from '../types/models';
+import type { CommentItem, CurrencyOption, Expense, ExpenseSettlement, PhotoOut } from '../types/models';
 import type { Friend, TripMember } from '../types/models';
 import { motion } from 'framer-motion';
 import {
@@ -479,6 +479,28 @@ export const TripDetailPage = () => {
         return Array.from(grouped.entries()).sort((a, b) => a[0] - b[0]);
     })();
 
+    const photosByPlace = useMemo(() => {
+        if (!trip) {
+            return { sections: [] as Array<{ place: Place; photos: PhotoOut[] }>, unassigned: [] as PhotoOut[] };
+        }
+        const sortPhotos = (photos: PhotoOut[]) =>
+            photos.slice().sort((a, b) => {
+                const aTime = a.takenAt ?? Number.MAX_SAFE_INTEGER;
+                const bTime = b.takenAt ?? Number.MAX_SAFE_INTEGER;
+                if (aTime !== bTime) {
+                    return aTime - bTime;
+                }
+                return a.id - b.id;
+            });
+
+        const sections = trip.places.map(place => ({
+            place,
+            photos: sortPhotos(trip.photos.filter(photo => photo.placeId === place.id)),
+        }));
+        const unassigned = sortPhotos(trip.photos.filter(photo => !photo.placeId));
+        return { sections, unassigned };
+    }, [trip]);
+
     if (isLoading && !trip) {
         return <div className={styles.loading}>Loading trip data...</div>;
     }
@@ -635,6 +657,51 @@ export const TripDetailPage = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </Card>
+
+                    <Card className={styles.metaCard}>
+                        <h3>Trip Photos by Stop</h3>
+                        <div className={styles.photoSections}>
+                            {photosByPlace.sections.map(section => (
+                                <div key={`place-photos-${section.place.id}`} className={styles.photoSection}>
+                                    <p className={styles.planDayTitle}>{section.place.name}</p>
+                                    {section.photos.length === 0 ? (
+                                        <p className={styles.helperText}>No photos assigned to this stop.</p>
+                                    ) : (
+                                        <div className={styles.tripPhotoGrid}>
+                                            {section.photos.map(photo => (
+                                                <button
+                                                    key={`trip-photo-${photo.id}`}
+                                                    type="button"
+                                                    className={styles.tripPhotoButton}
+                                                    onClick={() => setLightboxIndex(trip.photos.findIndex(p => p.id === photo.id))}
+                                                >
+                                                    <img src={`http://localhost:8000${photo.thumbUrl}`} alt={photo.name} className={styles.tripPhotoThumb} />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                            {photosByPlace.unassigned.length > 0 && (
+                                <div className={styles.photoSection}>
+                                    <p className={styles.planDayTitle}>Unassigned</p>
+                                    <div className={styles.tripPhotoGrid}>
+                                        {photosByPlace.unassigned.map(photo => (
+                                            <button
+                                                key={`trip-photo-unassigned-${photo.id}`}
+                                                type="button"
+                                                className={styles.tripPhotoButton}
+                                                onClick={() => setLightboxIndex(trip.photos.findIndex(p => p.id === photo.id))}
+                                            >
+                                                <img src={`http://localhost:8000${photo.thumbUrl}`} alt={photo.name} className={styles.tripPhotoThumb} />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {trip.photos.length === 0 && <p className={styles.helperText}>No trip photos yet.</p>}
                         </div>
                     </Card>
                 </section>
