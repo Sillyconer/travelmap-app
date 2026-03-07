@@ -818,7 +818,7 @@ export const TripDetailPage = () => {
 
                     <Card className={styles.metaCard}>
                         <h3>Trip Members</h3>
-                        {isOwner && (
+                        {isOwner && canEdit && (
                             <div className={styles.memberInviteRow}>
                                 <select
                                     value={selectedFriendId ?? ''}
@@ -856,7 +856,7 @@ export const TripDetailPage = () => {
                                             {member.role === 'owner' && <span className={styles.ownerBadge} title="Owner"> 👑</span>}
                                         </span>
                                     </button>
-                                    {isOwner && member.role !== 'owner' && (
+                                    {isOwner && canEdit && member.role !== 'owner' && (
                                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                             <select
                                                 value={member.role}
