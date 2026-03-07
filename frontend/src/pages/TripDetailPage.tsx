@@ -517,6 +517,24 @@ export const TripDetailPage = () => {
         setCollapsedPhotoSections(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
+    const collapseAllPhotoSections = () => {
+        if (!trip) {
+            return;
+        }
+        const next: Record<string, boolean> = {};
+        for (const place of trip.places) {
+            next[`place-${place.id}`] = true;
+        }
+        if (photosByPlace.unassigned.length > 0) {
+            next.unassigned = true;
+        }
+        setCollapsedPhotoSections(next);
+    };
+
+    const expandAllPhotoSections = () => {
+        setCollapsedPhotoSections({});
+    };
+
     if (isLoading && !trip) {
         return <div className={styles.loading}>Loading trip data...</div>;
     }
@@ -677,7 +695,15 @@ export const TripDetailPage = () => {
                     </Card>
 
                     <Card className={styles.metaCard}>
-                        <h3>Trip Photos by Stop</h3>
+                        <div className={styles.sectionHeaderRow}>
+                            <h3>Trip Photos by Stop</h3>
+                            {trip.photos.length > 0 && (
+                                <div className={styles.sectionActionsRow}>
+                                    <Button size="sm" variant="text" onClick={expandAllPhotoSections}>Expand all</Button>
+                                    <Button size="sm" variant="text" onClick={collapseAllPhotoSections}>Collapse all</Button>
+                                </div>
+                            )}
+                        </div>
                         <div className={styles.photoSections}>
                             {photosByPlace.sections.map(section => (
                                 <div key={`place-photos-${section.place.id}`} className={styles.photoSection}>

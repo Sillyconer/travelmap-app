@@ -257,6 +257,24 @@
     gap: 12px;
 }
 
+.sectionHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.sectionHeaderRow h3 {
+    margin: 0;
+}
+
+.sectionActionsRow {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
 .photoSection {
     display: grid;
     gap: 8px;
