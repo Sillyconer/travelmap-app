@@ -64,6 +64,22 @@
     background: color-mix(in srgb, var(--md-sys-color-primary-container) 35%, var(--md-sys-color-surface));
 }
 
+.viewerToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 999px;
+    color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-container-low);
+    font-size: 13px;
+}
+
+.viewerToggle input {
+    margin: 0;
+}
+
 /* ── Timeline ── */
 
 .placesSection {

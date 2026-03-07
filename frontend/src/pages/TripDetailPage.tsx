@@ -86,6 +86,7 @@ export const TripDetailPage = () => {
     const [planPlaceId, setPlanPlaceId] = useState<number | null>(null);
     const [planNote, setPlanNote] = useState('');
     const [collapsedPhotoSections, setCollapsedPhotoSections] = useState<Record<string, boolean>>({});
+    const [forceViewerMode, setForceViewerMode] = useState(false);
 
     // DnD Sensors
     const sensors = useSensors(
@@ -426,7 +427,8 @@ export const TripDetailPage = () => {
     };
 
     const isOwner = trip ? user?.id === trip.ownerUserId : false;
-    const canEdit = trip ? trip.accessRole !== 'viewer' : false;
+    const hasElevatedAccess = trip ? trip.accessRole === 'owner' || trip.accessRole === 'editor' : false;
+    const canEdit = trip ? trip.accessRole !== 'viewer' && !forceViewerMode : false;
 
     const tripExpenseParticipants = useMemo(() => {
         const participantMap = new Map<number, { id: number; name: string }>();
@@ -594,6 +596,16 @@ export const TripDetailPage = () => {
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    {hasElevatedAccess && (
+                        <label className={styles.viewerToggle}>
+                            <input
+                                type="checkbox"
+                                checked={forceViewerMode}
+                                onChange={e => setForceViewerMode(e.target.checked)}
+                            />
+                            <span>View as viewer</span>
+                        </label>
+                    )}
                     <Button variant="outlined" onClick={handleShareAlbum}>
                         <Share2 size={16} style={{ marginRight: 6 }} /> Share Album
                     </Button>
@@ -603,7 +615,9 @@ export const TripDetailPage = () => {
 
             {!canEdit && (
                 <Card className={styles.readOnlyCard}>
-                    You have viewer access to this trip. You can explore content but cannot edit itinerary, photos, or expenses.
+                    {hasElevatedAccess && forceViewerMode
+                        ? 'Viewer preview is enabled. You are temporarily seeing this trip as a read-only viewer.'
+                        : 'You have viewer access to this trip. You can explore content but cannot edit itinerary, photos, or expenses.'}
                 </Card>
             )}
 
