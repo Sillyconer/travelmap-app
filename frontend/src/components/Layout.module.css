@@ -10,19 +10,12 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    /* prevents scrollbars on the main element itself */
+    overflow: auto;
     position: relative;
 }
 
 .pageTransitionWrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow-y: auto;
-    /* Allow the content inside to scroll */
+    min-height: 100%;
 }
 
 /* Base styles for M3 dark theme scrollbars globally */

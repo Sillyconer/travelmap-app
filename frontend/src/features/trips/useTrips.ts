@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import * as api from '../../api/client';
 import type { TripCreate, TripUpdate } from '../../types/models';
@@ -8,19 +8,28 @@ import { showSnackbar } from '../../components/ui/Snackbar';
  * Hook to manage Trips data fetching and mutations.
  */
 export function useTrips() {
-    const { trips, setTrips, updateTrip: updateTripInStore, removeTrip } = useStore();
-    const [isLoading, setIsLoading] = useState(false);
+    const {
+        trips,
+        isLoadingTrips,
+        setTrips,
+        setTripsLoading,
+        updateTrip: updateTripInStore,
+        removeTrip,
+    } = useStore();
 
     // Fetch all trips
     const fetchTrips = async () => {
-        setIsLoading(true);
+        if (isLoadingTrips) {
+            return;
+        }
+        setTripsLoading(true);
         try {
             const data = await api.getTrips();
             setTrips(data);
         } catch (err: any) {
             showSnackbar(`Failed to load trips: ${err.message}`);
         } finally {
-            setIsLoading(false);
+            setTripsLoading(false);
         }
     };
 
@@ -63,14 +72,14 @@ export function useTrips() {
     };
 
     useEffect(() => {
-        if (trips.length === 0) {
+        if (trips.length === 0 && !isLoadingTrips) {
             fetchTrips();
         }
-    }, []); // Only fetch once on mount if empty
+    }, [trips.length, isLoadingTrips]);
 
     return {
         trips,
-        isLoading,
+        isLoading: isLoadingTrips,
         fetchTrips,
         createTrip,
         updateTrip,

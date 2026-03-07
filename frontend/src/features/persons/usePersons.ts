@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import * as api from '../../api/client';
 import type { PersonCreate, PersonUpdate } from '../../types/models';
@@ -8,19 +8,21 @@ import { showSnackbar } from '../../components/ui/Snackbar';
  * Hook to manage Persons data fetching and mutations.
  */
 export function usePersons() {
-    const { persons, setPersons } = useStore();
-    const [isLoading, setIsLoading] = useState(false);
+    const { persons, isLoadingPersons, setPersons, setPersonsLoading } = useStore();
 
     // Fetch all persons
     const fetchPersons = async () => {
-        setIsLoading(true);
+        if (isLoadingPersons) {
+            return;
+        }
+        setPersonsLoading(true);
         try {
             const data = await api.getPersons();
             setPersons(data);
         } catch (err: any) {
             showSnackbar(`Failed to load people: ${err.message}`);
         } finally {
-            setIsLoading(false);
+            setPersonsLoading(false);
         }
     };
 
@@ -63,14 +65,14 @@ export function usePersons() {
     };
 
     useEffect(() => {
-        if (persons.length === 0) {
+        if (persons.length === 0 && !isLoadingPersons) {
             fetchPersons();
         }
-    }, []);
+    }, [persons.length, isLoadingPersons]);
 
     return {
         persons,
-        isLoading,
+        isLoading: isLoadingPersons,
         fetchPersons,
         createPerson,
         updatePerson,

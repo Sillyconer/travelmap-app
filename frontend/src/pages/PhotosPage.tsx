@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import * as api from '../api/client';
 import { Lightbox } from '../components/gallery/Lightbox';
 import { MdDownload, MdLocationOff, MdCheckCircle, MdChatBubbleOutline, MdDeleteOutline } from 'react-icons/md';
-import { motion } from 'framer-motion';
 import { showSnackbar } from '../components/ui/Snackbar';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
@@ -388,18 +387,8 @@ export const PhotosPage = () => {
                     groupedPhotos.map(group => (
                         <div key={group.label} className={styles.group}>
                             <h2 className={styles.groupLabel}>{group.label}</h2>
-                            <motion.div
+                            <div
                                 className={styles.grid}
-                                variants={{
-                                    hidden: { opacity: 0 },
-                                    show: {
-                                        opacity: 1,
-                                        transition: { staggerChildren: 0.03 }
-                                    }
-                                }}
-                                initial="hidden"
-                                whileInView="show"
-                                viewport={{ once: true, margin: "100px" }}
                             >
                                 {group.photos.map((photo) => {
                                     // Calculate the global index for the lightbox
@@ -407,12 +396,8 @@ export const PhotosPage = () => {
                                     const isSelected = selectedIds.has(photo.id);
 
                                     return (
-                                        <motion.div
+                                        <div
                                             key={photo.id}
-                                            variants={{
-                                                hidden: { opacity: 0, scale: 0.8 },
-                                                show: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
-                                            }}
                                             className={`${styles.photoContainer} ${isSelected ? styles.selected : ''}`}
                                             onClick={() => handlePhotoClick(globalIndex, photo.id)}
                                             onContextMenu={(e) => {
@@ -423,8 +408,6 @@ export const PhotosPage = () => {
                                                     handleSharePhoto(photo.id);
                                                 }
                                             }}
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.95 }}
                                         >
                                             <img
                                                 src={`http://localhost:8000${photo.thumbUrl}`}
@@ -458,10 +441,10 @@ export const PhotosPage = () => {
                                                     {isSelected && <MdCheckCircle className={styles.checkIcon} />}
                                                 </div>
                                             )}
-                                        </motion.div>
+                                        </div>
                                     );
                                 })}
-                            </motion.div>
+                            </div>
                         </div>
                     ))
                 )}

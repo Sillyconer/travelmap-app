@@ -1,8 +1,8 @@
-import { GeoJSON, MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTrips } from '../../features/trips/useTrips';
 import { useMapFilters } from '../../features/map/useMapFilters';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { TripMarkers } from './TripMarkers';
 import { TripPolylines } from './TripPolylines';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -19,7 +19,6 @@ type StyleSpec = {
     backgroundColor: string;
     attribution: string;
     layers: TileSpec[];
-    useOceanicLandOverlay?: boolean;
 };
 
 const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -60,30 +59,17 @@ const MAP_STYLE_SPECS: Record<MapStyle, StyleSpec> = {
     'oceanic-deep': {
         backgroundColor: '#5f7280',
         attribution: CARTO_ATTRIBUTION,
-        layers: [
-            { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-blue', opacity: 1 },
-            { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-boundaries', opacity: 0.42 },
-            { url: 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-oceanic-labels', opacity: 0.82 },
-        ],
-        useOceanicLandOverlay: true,
+        layers: [{ url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' }],
     },
     'voyager-neo': {
         backgroundColor: '#2a1b33',
         attribution: CARTO_ATTRIBUTION,
-        layers: [
-            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-voyager-base' },
-            { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', className: 'tile-voyager-desert', opacity: 0.48 },
-            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-voyager-labels', opacity: 0.62 },
-        ],
+        layers: [{ url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' }],
     },
     'pine-earth': {
         backgroundColor: '#0f1d15',
         attribution: TOPO_ATTRIBUTION,
-        layers: [
-            { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', className: 'tile-pine-base' },
-            { url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', className: 'tile-pine-water', opacity: 0.38 },
-            { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', className: 'tile-pine-labels', opacity: 0.75 },
-        ],
+        layers: [{ url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png' }],
     },
 };
 
@@ -104,7 +90,6 @@ export const MapLayer = () => {
     const { trips } = useTrips();
     const { visibleTripIds, activePersonIds, setAllTripsVisible } = useMapFilters();
     const { mapStyle } = useSettingsStore();
-    const [oceanicLandData, setOceanicLandData] = useState<any | null>(null);
 
     // Initialize all trips as visible by default
     useEffect(() => {
@@ -113,30 +98,22 @@ export const MapLayer = () => {
         }
     }, [trips, visibleTripIds.size, setAllTripsVisible]);
 
+    // If a person filter is active but none of their trips are currently visible,
+    // automatically reveal matching trips so the map is not empty.
     useEffect(() => {
-        if (mapStyle !== 'oceanic-deep' || oceanicLandData) {
-            return;
+        if (activePersonIds.size === 0) return;
+
+        const matchingTripIds = trips
+            .filter(t => t.personIds?.some(pid => activePersonIds.has(pid)))
+            .map(t => t.id);
+
+        if (matchingTripIds.length === 0) return;
+
+        const hasAnyMatchingVisible = matchingTripIds.some(id => visibleTripIds.has(id));
+        if (!hasAnyMatchingVisible) {
+            setAllTripsVisible(Array.from(new Set([...Array.from(visibleTripIds), ...matchingTripIds])));
         }
-
-        let cancelled = false;
-        const loadLand = async () => {
-            try {
-                const res = await fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json');
-                if (!res.ok) return;
-                const data = await res.json();
-                if (!cancelled) {
-                    setOceanicLandData(data);
-                }
-            } catch {
-                // Keep fallback tiles only if overlay fetch fails.
-            }
-        };
-
-        loadLand();
-        return () => {
-            cancelled = true;
-        };
-    }, [mapStyle, oceanicLandData]);
+    }, [activePersonIds, trips, visibleTripIds, setAllTripsVisible]);
 
     const tripsAfterPersonFilter = activePersonIds.size > 0
         ? trips.filter(t => t.personIds?.some(pid => activePersonIds.has(pid)))
@@ -165,19 +142,6 @@ export const MapLayer = () => {
                         opacity={layer.opacity ?? 1}
                     />
                 ))}
-
-                {styleSpec.useOceanicLandOverlay && oceanicLandData && (
-                    <GeoJSON
-                        data={oceanicLandData}
-                        style={() => ({
-                            fillColor: '#4a8fcb',
-                            fillOpacity: 0.98,
-                            color: '#6f9ab6',
-                            weight: 0.4,
-                            opacity: 0.7,
-                        })}
-                    />
-                )}
 
                 <TripPolylines trips={visibleTrips} />
                 <TripMarkers trips={visibleTrips} />

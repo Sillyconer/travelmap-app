@@ -13,6 +13,8 @@ interface AppState {
     // Actions
     setTrips: (trips: Trip[]) => void;
     setPersons: (persons: Person[]) => void;
+    setTripsLoading: (loading: boolean) => void;
+    setPersonsLoading: (loading: boolean) => void;
     updateTrip: (trip: Trip) => void;
     removeTrip: (id: number) => void;
 }
@@ -29,6 +31,8 @@ export const useStore = create<AppState>((set) => ({
 
     setTrips: (trips) => set({ trips }),
     setPersons: (persons) => set({ persons }),
+    setTripsLoading: (loading) => set({ isLoadingTrips: loading }),
+    setPersonsLoading: (loading) => set({ isLoadingPersons: loading }),
 
     updateTrip: (updated) => set((state) => ({
         trips: state.trips.map(t => t.id === updated.id ? updated : t)
