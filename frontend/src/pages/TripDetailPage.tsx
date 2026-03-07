@@ -85,6 +85,7 @@ export const TripDetailPage = () => {
     const [planEndAt, setPlanEndAt] = useState('');
     const [planPlaceId, setPlanPlaceId] = useState<number | null>(null);
     const [planNote, setPlanNote] = useState('');
+    const [collapsedPhotoSections, setCollapsedPhotoSections] = useState<Record<string, boolean>>({});
 
     // DnD Sensors
     const sensors = useSensors(
@@ -512,6 +513,10 @@ export const TripDetailPage = () => {
         return date.toLocaleString();
     };
 
+    const togglePhotoSection = (key: string) => {
+        setCollapsedPhotoSections(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
     if (isLoading && !trip) {
         return <div className={styles.loading}>Loading trip data...</div>;
     }
@@ -677,11 +682,21 @@ export const TripDetailPage = () => {
                             {photosByPlace.sections.map(section => (
                                 <div key={`place-photos-${section.place.id}`} className={styles.photoSection}>
                                     <div className={styles.photoSectionHeader}>
-                                        <p className={styles.planDayTitle}>{section.place.name}</p>
-                                        <span className={styles.photoSectionMeta}>{section.photos.length} photo{section.photos.length === 1 ? '' : 's'}</span>
+                                        <button
+                                            type="button"
+                                            className={styles.photoSectionToggle}
+                                            onClick={() => togglePhotoSection(`place-${section.place.id}`)}
+                                        >
+                                            <span className={styles.planDayTitle}>{section.place.name}</span>
+                                            <span className={styles.photoSectionMeta}>
+                                                {section.photos.length} photo{section.photos.length === 1 ? '' : 's'}
+                                                {' '}
+                                                {collapsedPhotoSections[`place-${section.place.id}`] ? '▸' : '▾'}
+                                            </span>
+                                        </button>
                                     </div>
                                     {section.place.note && <p className={styles.helperText}>{section.place.note}</p>}
-                                    {section.photos.length === 0 ? (
+                                    {collapsedPhotoSections[`place-${section.place.id}`] ? null : section.photos.length === 0 ? (
                                         <p className={styles.helperText}>No photos assigned to this stop.</p>
                                     ) : (
                                         <div className={styles.tripPhotoGrid}>
@@ -707,26 +722,38 @@ export const TripDetailPage = () => {
                             {photosByPlace.unassigned.length > 0 && (
                                 <div className={styles.photoSection}>
                                     <div className={styles.photoSectionHeader}>
-                                        <p className={styles.planDayTitle}>Unassigned</p>
-                                        <span className={styles.photoSectionMeta}>{photosByPlace.unassigned.length} photo{photosByPlace.unassigned.length === 1 ? '' : 's'}</span>
+                                        <button
+                                            type="button"
+                                            className={styles.photoSectionToggle}
+                                            onClick={() => togglePhotoSection('unassigned')}
+                                        >
+                                            <span className={styles.planDayTitle}>Unassigned</span>
+                                            <span className={styles.photoSectionMeta}>
+                                                {photosByPlace.unassigned.length} photo{photosByPlace.unassigned.length === 1 ? '' : 's'}
+                                                {' '}
+                                                {collapsedPhotoSections.unassigned ? '▸' : '▾'}
+                                            </span>
+                                        </button>
                                     </div>
-                                    <div className={styles.tripPhotoGrid}>
-                                        {photosByPlace.unassigned.map(photo => (
-                                            <div key={`trip-photo-unassigned-${photo.id}`} className={styles.tripPhotoCard}>
-                                                <button
-                                                    type="button"
-                                                    className={styles.tripPhotoButton}
-                                                    onClick={() => setLightboxIndex(trip.photos.findIndex(p => p.id === photo.id))}
-                                                >
-                                                    <img src={`http://localhost:8000${photo.thumbUrl}`} alt={photo.name} className={styles.tripPhotoThumb} />
-                                                </button>
-                                                <div className={styles.tripPhotoMeta}>
-                                                    <strong className={styles.tripPhotoName}>{photo.name}</strong>
-                                                    <span>{formatTakenAt(photo.takenAt)}</span>
+                                    {collapsedPhotoSections.unassigned ? null : (
+                                        <div className={styles.tripPhotoGrid}>
+                                            {photosByPlace.unassigned.map(photo => (
+                                                <div key={`trip-photo-unassigned-${photo.id}`} className={styles.tripPhotoCard}>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.tripPhotoButton}
+                                                        onClick={() => setLightboxIndex(trip.photos.findIndex(p => p.id === photo.id))}
+                                                    >
+                                                        <img src={`http://localhost:8000${photo.thumbUrl}`} alt={photo.name} className={styles.tripPhotoThumb} />
+                                                    </button>
+                                                    <div className={styles.tripPhotoMeta}>
+                                                        <strong className={styles.tripPhotoName}>{photo.name}</strong>
+                                                        <span>{formatTakenAt(photo.takenAt)}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             {trip.photos.length === 0 && <p className={styles.helperText}>No trip photos yet.</p>}
