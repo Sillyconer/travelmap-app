@@ -12,7 +12,6 @@ import { SettingsPage } from './pages/SettingsPage';
 import { SharePage } from './pages/SharePage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { ProfilesPage } from './pages/ProfilesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { SearchPage } from './pages/SearchPage';
 import { useAuthStore } from './store/useAuthStore';
@@ -43,7 +42,7 @@ function App() {
           <Route path="trips" element={<ManageTripsPage />} />
           <Route path="trips/:id" element={<TripDetailPage />} />
           <Route path="people" element={<ManagePersonsPage />} />
-          <Route path="profiles" element={<ProfilesPage />} />
+          <Route path="profiles" element={<ProfilePage />} />
           <Route path="profiles/:username" element={<ProfilePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="search" element={<SearchPage />} />
